@@ -1,0 +1,55 @@
+{
+    "baseURL": "https://rewards.bing.com",
+    "sessionPath": "sessions",
+    "headless": true,
+    "parallel": false,
+    "runOnZeroPoints": false,
+    "clusters": 1,
+    "debug": true,
+    "saveFingerprint": {
+        "mobile": false,
+        "desktop": false
+    },
+    "workers": {
+        "doDailySet": true,
+        "doMorePromotions": true,
+        "doPunchCards": true,
+        "doDesktopSearch": true,
+        "doMobileSearch": true,
+        "doDailyCheckIn": true,
+        "doReadToEarn": true
+    },
+    "searchOnBingLocalQueries": true,
+    "globalTimeout": "30s",
+    "navigationTimeout": "90s",
+    "searchSettings": {
+        "useGeoLocaleQueries": true,
+        "scrollRandomResults": true,
+        "clickRandomResults": true,
+        "searchDelay": {
+            "min": "3min",
+            "max": "5min"
+        },
+        "retryMobileSearchAmount": 2
+    },
+    "logExcludeFunc": [
+        "SEARCH-CLOSE-TABS"
+    ],
+    "webhookLogExcludeFunc": [
+        "SEARCH-CLOSE-TABS"
+    ],
+    "proxy": {
+        "proxyGoogleTrends": true,
+        "proxyBingTerms": true
+    },
+    "webhook": {
+        "enabled": false,
+        "url": ""
+    },
+    "ntfy": {
+        "enabled": false,
+        "url": "",  
+        "topic": "", 
+        "authToken": "" 
+    }
+}
