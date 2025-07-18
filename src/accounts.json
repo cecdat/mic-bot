@@ -1,48 +1,24 @@
 [
     {
-        "email": "hehaipi@outlook.com",
-        "password": "Greatwall@123",
+        "email": "email_1",
+        "password": "password_1",
         "proxy": {
             "proxyAxios": true,
             "url": "",
             "port": 0,
             "username": "",
             "password": ""
-        },
-		"userAgents": {
-            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.2592.102",
-            "mobile": "Mozilla/5.0 (Linux; Android 14; 2304FPN6DC) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36 EdgA/126.0.2592.102"
         }
     },
-     {
-        "email": "hezimu66@outlook.com",
-        "password": "Greatwall@123",
+    {
+        "email": "email_2",
+        "password": "password_2",
         "proxy": {
             "proxyAxios": true,
             "url": "",
             "port": 0,
             "username": "",
             "password": ""
-        },
-		"userAgents": {
-            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.2592.87",
-            "mobile": "Mozilla/5.0 (Linux; Android 14; PGT-N19) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36 EdgA/126.0.2592.87"
-        }
-    },
-       {
-        "email": "weihed@outlook.com",
-        "password": "Greatwall@123",
-        "proxy": {
-            "proxyAxios": true,
-            "url": "",
-            "port": 0,
-            "username": "",
-            "password": ""
-        },
-		"userAgents": {
-            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.2535.92",
-            "mobile": "Mozilla/5.0 (Linux; Android 14; CPH2609) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36 EdgA/125.0.2535.92"
         }
     }
-
 ]

@@ -1,10 +1,12 @@
 import { Page } from 'rebrowser-playwright'
 import * as crypto from 'crypto'
 import { AxiosRequestConfig } from 'axios'
+import fs from 'fs'
+import path from 'path'
 
 import { MicrosoftRewardsBot } from '../index'
 import { saveSessionData } from '../util/Load'
-import { sendPush } from '../util/Push' 
+import { sendPush } from '../util/Push'
 import { OAuth } from '../interface/OAuth'
 
 export class Login {
@@ -35,7 +37,7 @@ export class Login {
 
     async login(page: Page, email: string, password: string) {
         try {
-            this.bot.log(this.bot.isMobile, '登录', '开始登录流程！');
+            this.bot.log(this.bot.isMobile, '登录', `[${email}] 开始登录流程！`);
             await this.gotoWithRetry(page, 'https://rewards.bing.com/signin');
             await page.waitForLoadState('domcontentloaded').catch(() => { });
             await this.bot.browser.utils.reloadBadPage(page);
@@ -43,19 +45,14 @@ export class Login {
             const isLoggedIn = await page.waitForSelector('html[data-role-name="RewardsPortal"]', { timeout: 10000 }).then(() => true).catch(() => false);
             if (!isLoggedIn) {
                 await this.execLogin(page, email, password);
-                this.bot.log(this.bot.isMobile, '登录', '成功登录到微软账户');
             } else {
-                this.bot.log(this.bot.isMobile, '登录', '已经处于登录状态');
+                this.bot.log(this.bot.isMobile, '登录', `[${email}] 已经处于登录状态`);
                 await this.checkAccountLocked(page);
             }
-
-            // [关键修改] 移除冗余且不稳定的 checkBingLogin 调用
-            // await this.checkBingLogin(page); 
-            
             await saveSessionData(this.bot.config.sessionPath, page.context(), email, this.bot.isMobile);
-            this.bot.log(this.bot.isMobile, '登录', '登录成功，并已保存登录会话！');
+            this.bot.log(this.bot.isMobile, '登录', `[${email}] 登录成功，并已保存登录会话！`);
         } catch (error) {
-            throw this.bot.log(this.bot.isMobile, '登录', `发生错误: ${error}`, 'error');
+            throw this.bot.log(this.bot.isMobile, '登录', `[${email}] 发生错误: ${error}`, 'error');
         }
     }
 
@@ -66,12 +63,11 @@ export class Login {
             await this.bot.browser.utils.reloadBadPage(page);
             await this.bot.utils.wait(2000);
             await this.enterPassword(page, password);
-            await this.bot.utils.wait(2000);
-            await this.checkAccountLocked(page);
-            await this.bot.browser.utils.reloadBadPage(page);
-            await this.checkLoggedIn(page);
+            await this.checkLoggedIn(page, email);
+            this.bot.log(this.bot.isMobile, '登录', `[${email}] 成功登录到微软账户`);
         } catch (error) {
-            this.bot.log(this.bot.isMobile, '登录', `发生错误: ${error}`, 'error');
+            this.bot.log(this.bot.isMobile, '登录', `[${email}] 发生错误: ${error}`, 'error');
+            throw error;
         }
     }
 
@@ -80,13 +76,13 @@ export class Login {
         try {
             const emailField = await page.waitForSelector(emailInputSelector, { state: 'visible', timeout: 2000 }).catch(() => null);
             if (!emailField) {
-                this.bot.log(this.bot.isMobile, '登录', '未找到邮箱输入框', 'warn');
+                this.bot.log(this.bot.isMobile, '登录', `[${email}] 未找到邮箱输入框`, 'warn');
                 return;
             }
             await this.bot.utils.wait(1000);
             const emailPrefilled = await page.waitForSelector('#userDisplayName', { timeout: 5000 }).catch(() => null);
             if (emailPrefilled) {
-                this.bot.log(this.bot.isMobile, '登录', '邮箱已被微软预填');
+                this.bot.log(this.bot.isMobile, '登录', `[${email}] 邮箱已被微软预填`);
             } else {
                 await page.fill(emailInputSelector, '');
                 await this.bot.utils.wait(500);
@@ -96,13 +92,17 @@ export class Login {
             const nextButton = await page.waitForSelector('button[type="submit"]', { timeout: 2000 }).catch(() => null);
             if (nextButton) {
                 await nextButton.click();
-                await this.bot.utils.wait(2000);
-                this.bot.log(this.bot.isMobile, '登录', '邮箱输入成功');
+                await this.bot.utils.wait(3000);
+
+                // [核心逻辑] 在这里处理“验证电子邮件”页面
+                await this.handleVerifyEmailPage(page, email);
+
+                this.bot.log(this.bot.isMobile, '登录', `[${email}] 邮箱输入成功`);
             } else {
-                this.bot.log(this.bot.isMobile, '登录', '输入邮箱后未找到“下一步”按钮', 'warn');
+                this.bot.log(this.bot.isMobile, '登录', `[${email}] 输入邮箱后未找到“下一步”按钮`, 'warn');
             }
         } catch (error) {
-            this.bot.log(this.bot.isMobile, '登录', `邮箱输入失败: ${error}`, 'error');
+            this.bot.log(this.bot.isMobile, '登录', `[${email}] 邮箱输入失败: ${error}`, 'error');
         }
     }
 
@@ -174,29 +174,39 @@ export class Login {
             await sendPush(pushTitle, pushContent);
         }
 
-        let approvalSuccess = false;
-        const startTime = Date.now();
-        const timeout = 60000;
+        while (true) {
+            let approvalSuccess = false;
+            const startTime = Date.now();
+            const timeout = 60000;
 
-        this.bot.log(this.bot.isMobile, '登录', '正在等待应用批准... (超时时间60秒)');
+            this.bot.log(this.bot.isMobile, '登录', '正在等待应用批准... (超时时间60秒)');
 
-        while (Date.now() - startTime < timeout) {
-            if (page.url().includes('rewards.bing.com')) {
-                this.bot.log(this.bot.isMobile, '登录', '检测到URL已跳转，登录已批准！');
-                approvalSuccess = true;
+            while (Date.now() - startTime < timeout) {
+                if (page.url().includes('rewards.bing.com')) {
+                    this.bot.log(this.bot.isMobile, '登录', '检测到URL已跳转，登录已批准！');
+                    approvalSuccess = true;
+                    break;
+                }
+                await this.bot.utils.wait(2000);
+            }
+
+            if (approvalSuccess) {
                 break;
             }
-            await this.bot.utils.wait(2000);
-        }
 
-        if (!approvalSuccess) {
             this.bot.log(this.bot.isMobile, '登录', '等待批准超时。将尝试获取新验证码...', 'warn');
             await page.click('[data-testid="viewFooter"] span').catch(() => {});
             const newNumber = await this.get2FACode(page);
             if(newNumber) {
-                await this.authAppVerification(page, newNumber);
+                numberToPress = newNumber;
+                const accountEmail = await page.evaluate(() => (document.querySelector('#bannerText') as HTMLElement | null)?.innerText || '未知账号');
+                const pushTitle = `微软账户新授权码`;
+                const pushContent = `账号: ${accountEmail}，新授权码: ${newNumber}`;
+                this.bot.log(this.bot.isMobile, '登录', `新的验证码: ${newNumber}。请在应用中输入。`);
+                await sendPush(pushTitle, pushContent);
             } else {
                  this.bot.log(this.bot.isMobile, '登录', '无法获取新的验证码，请检查手机或手动操作。', 'error');
+                 break; 
             }
         }
     }
@@ -241,46 +251,86 @@ export class Login {
         return tokenData.access_token;
     }
 
-    private async checkLoggedIn(page: Page) {
-        const targetHostname = 'rewards.bing.com';
-        const targetPathname = '/';
-        while (true) {
-            await this.dismissLoginMessages(page);
-            const currentURL = new URL(page.url());
-            if (currentURL.hostname === targetHostname && currentURL.pathname === targetPathname) {
-                break;
+    private async checkLoggedIn(page: Page, email: string) {
+        this.bot.log(this.bot.isMobile, '登录', `[${email}] 正在验证登录后状态...`);
+        try {
+            const navigationPromise = page.waitForURL('**/rewards.bing.com/**', {
+                timeout: 60000,
+                waitUntil: 'domcontentloaded'
+            });
+    
+            const intermediatePageHandler = (async () => {
+                while (!page.isClosed() && !page.url().includes('rewards.bing.com')) {
+                    await this.dismissLoginMessages(page, email);
+                    await this.handleVerifyEmailPage(page, email);
+                    await this.bot.utils.wait(1000);
+                }
+            })();
+    
+            await Promise.race([navigationPromise, intermediatePageHandler]);
+
+            if (this.bot.config.debug) {
+                await this.saveSnapshot(page, email, 'post_login_snapshot.html');
             }
-            await this.bot.utils.wait(2000); // 添加等待，避免在重定向上卡住
+
+            await page.waitForSelector('html[data-role-name="RewardsPortal"]', { timeout: 10000 });
+            this.bot.log(this.bot.isMobile, '登录', `[${email}] 成功登录到奖励门户`);
+        } catch (error) {
+            this.bot.log(this.bot.isMobile, '登录', `[${email}] 验证登录状态时超时或失败: ${error}`, 'error');
+            if (this.bot.config.debug) {
+                await this.saveSnapshot(page, email, 'login_failure_snapshot.html');
+            }
+            throw new Error(`[${email}] 验证登录状态失败`);
         }
-        await page.waitForSelector('html[data-role-name="RewardsPortal"]', { timeout: 10000 });
-        this.bot.log(this.bot.isMobile, '登录', '成功登录到奖励门户');
     }
 
-    private async dismissLoginMessages(page: Page) {
-        if (await page.waitForSelector('[data-testid="biometricVideo"]', { timeout: 2000 }).catch(() => null)) {
-            const skipButton = await page.$('[data-testid="secondaryButton"]');
-            if (skipButton) {
-                await skipButton.click();
-                this.bot.log(this.bot.isMobile, '关闭所有登录消息', '关闭了 "使用Passekey" 弹窗');
-                await page.waitForTimeout(500);
-            }
+    private async dismissLoginMessages(page: Page, email: string) {
+        const staySignedInButton = page.locator('[data-testid="primaryButton"]');
+        if (await staySignedInButton.isVisible({ timeout: 1000 })) {
+            await staySignedInButton.click();
+            this.bot.log(this.bot.isMobile, '关闭消息', `[${email}] 点击了“保持登录状态”弹窗中的“是”`);
+            await page.waitForTimeout(500);
         }
-        if (await page.waitForSelector('[data-testid="kmsiVideo"]', { timeout: 2000 }).catch(() => null)) {
-            const yesButton = await page.$('[data-testid="primaryButton"]');
-            if (yesButton) {
-                await yesButton.click();
-                this.bot.log(this.bot.isMobile, '关闭所有登录消息', '关闭了 "保持登录状态" 弹窗');
-                await page.waitForTimeout(500);
+        const usePasskeyButton = page.locator('[data-testid="secondaryButton"]');
+        if (await usePasskeyButton.isVisible({ timeout: 1000 })) {
+            await usePasskeyButton.click();
+            this.bot.log(this.bot.isMobile, '关闭消息', `[${email}] 关闭了 "使用Passekey" 弹窗`);
+            await page.waitForTimeout(500);
+        }
+    }
+    
+    private async handleVerifyEmailPage(page: Page, email: string) {
+        const verifyEmailTitle = page.locator('h1:has-text("验证你的电子邮件"), h1:has-text("Verify your email")');
+        // Use a more robust selector to avoid strict mode violation
+        const usePasswordLink = page.getByRole('button', { name: /Use your password/i });
+
+        if (await verifyEmailTitle.isVisible({ timeout: 2000 })) {
+            this.bot.log(this.bot.isMobile, '登录', `[${email}] 检测到“验证电子邮件”页面，将选择“使用密码”登录...`);
+            if (await usePasswordLink.isVisible()) {
+                await usePasswordLink.click();
+                await this.bot.utils.wait(2000);
+            } else {
+                this.bot.log(this.bot.isMobile, '登录', `[${email}] 未找到“使用密码”链接`, 'error');
             }
         }
     }
 
-    // [关键修改] 注释掉整个函数，因为我们不再调用它
-    /*
-    private async checkBingLogin(page: Page): Promise<void> {
-        // ...
+    private async saveSnapshot(page: Page, email: string, filename: string) {
+        this.bot.log(this.bot.isMobile, '调试模式', `[${email}] 正在保存页面快照 (${filename})...`, 'warn');
+        try {
+            await this.bot.utils.wait(2000);
+            const htmlContent = await page.content();
+            const sessionDir = path.join(__dirname, '..', '..', this.bot.config.sessionPath, email);
+            if (!fs.existsSync(sessionDir)) {
+                fs.mkdirSync(sessionDir, { recursive: true });
+            }
+            const snapshotPath = path.join(sessionDir, filename);
+            fs.writeFileSync(snapshotPath, htmlContent);
+            this.bot.log(this.bot.isMobile, '调试模式', `页面快照已成功保存到: ${snapshotPath}`, 'log', 'green');
+        } catch (e) {
+            this.bot.log(this.bot.isMobile, '调试模式', `保存页面快照失败: ${e}`, 'error');
+        }
     }
-    */
 
     private async checkAccountLocked(page: Page) {
         await this.bot.utils.wait(2000);

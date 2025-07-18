@@ -5,7 +5,7 @@
     "parallel": false,
     "runOnZeroPoints": false,
     "clusters": 1,
-    "debug": true,
+    "debug": false,
     "saveFingerprint": {
         "mobile": false,
         "desktop": false
@@ -21,7 +21,7 @@
     },
     "searchOnBingLocalQueries": true,
     "globalTimeout": "30s",
-    "navigationTimeout": "90s",
+    "navigationTimeout": "120s",
     "searchSettings": {
         "useGeoLocaleQueries": true,
         "scrollRandomResults": true,

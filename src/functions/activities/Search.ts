@@ -1,7 +1,7 @@
 import { Page } from 'rebrowser-playwright'
 import { platform } from 'os'
-import fs from 'fs' 
-import path from 'path' 
+import fs from 'fs'
+import path from 'path'
 
 import { Workers } from '../Workers'
 
@@ -24,77 +24,54 @@ export class Search extends Workers {
             return
         }
 
+        // 根据剩余积分计算需要的搜索次数，并增加2次冗余
+        const requiredSearches = Math.ceil(missingPoints / 3) + 2;
+        this.bot.log(this.bot.isMobile, '搜索-必应', `需要 ${missingPoints} 积分，将执行 ${requiredSearches} 次搜索。`);
+
         let allQueries = await this.getLocalSearchWords();
-        const uniqueQueries = [...new Set(allQueries)];
-        let searchQueries: string[];
-
-        if (uniqueQueries.length > 55) {
-            this.bot.log(this.bot.isMobile, '搜索-本地词库', `词库共 ${uniqueQueries.length} 个词，将随机抽取55个使用。`);
-            const shuffledQueries = this.bot.utils.shuffleArray(uniqueQueries);
-            searchQueries = shuffledQueries.slice(0, 55);
-        } else {
-            this.bot.log(this.bot.isMobile, '搜索-本地词库', `词库共 ${uniqueQueries.length} 个词，将全部使用。`);
-            searchQueries = uniqueQueries;
-        }
-        
-        if (searchQueries.length === 0) {
+        if (allQueries.length === 0) {
             this.bot.log(this.bot.isMobile, '搜索-必应', '本地搜索词文件为空或读取失败，将使用默认词条', 'warn');
-            searchQueries = ['天气', '新闻', '电影', '音乐', '游戏', '购物', '旅游', '美食', '体育', '科技', '财经', '汽车', '房产', '教育', '健康'];
+            allQueries = ['天气', '新闻', '电影', '音乐', '游戏', '购物', '旅游', '美食', '体育', '科技', '财经', '汽车', '房产', '教育', '健康'];
         }
 
+        const uniqueQueries = [...new Set(allQueries)];
+        const shuffledQueries = this.bot.utils.shuffleArray(uniqueQueries);
+        // 截取所需数量的搜索词
+        const searchQueries = shuffledQueries.slice(0, requiredSearches);
+        
         await page.goto(this.searchPageURL ? this.searchPageURL : this.bingHome)
         await this.bot.utils.wait(2000)
         await this.bot.browser.utils.tryDismissAllMessages(page)
 
         let maxLoop = 0
 
-        for (let i = 0; i < searchQueries.length; i++) {
-            const query = searchQueries[i] as string
+        for (const query of searchQueries) {
             this.bot.log(this.bot.isMobile, '搜索-必应', `剩余 ${missingPoints} 积分 | 查询: ${query}`)
             searchCounters = await this.bingSearch(page, query)
             const newMissingPoints = this.calculatePoints(searchCounters)
-            if (newMissingPoints == missingPoints) {
+            
+            if (newMissingPoints === missingPoints) {
                 maxLoop++
             } else {
-                maxLoop = 0
+                maxLoop = 0 // 重置计数器
             }
-            missingPoints = newMissingPoints
-            if (missingPoints === 0) break;
-            if (maxLoop > 5 && this.bot.isMobile) {
-                this.bot.log(this.bot.isMobile, '搜索-必应', '搜索5次未获得积分，可能User-Agent有问题', 'warn')
-                break
-            }
-            if (maxLoop > 10) {
-                this.bot.log(this.bot.isMobile, '搜索-必应', '搜索10次未获得积分，中止搜索任务', 'warn')
-                maxLoop = 0 
-                break
-            }
-        }
 
-        if (missingPoints > 0 && this.bot.isMobile) {
-            return
+            missingPoints = newMissingPoints
+            if (missingPoints === 0) {
+                this.bot.log(this.bot.isMobile, '搜索-必应', '所有搜索积分已获取完毕！');
+                break;
+            }
+
+            if (maxLoop > 5) {
+                this.bot.log(this.bot.isMobile, '搜索-必应', '连续5次搜索未获得积分，可能已达上限或UA有问题，中止搜索任务。', 'warn')
+                break
+            }
         }
         
         if (missingPoints > 0) {
-            this.bot.log(this.bot.isMobile, '搜索-必应', `搜索完成，但仍缺少 ${missingPoints} 积分，将进行额外补充搜索`)
-            let extraQueries = this.bot.utils.shuffleArray(searchQueries);
-            for (const term of extraQueries) {
-                this.bot.log(this.bot.isMobile, '搜索-必应-额外', `${missingPoints} 积分剩余 | 查询: ${term}`)
-                searchCounters = await this.bingSearch(page, term);
-                const newMissingPoints = this.calculatePoints(searchCounters);
-                if (newMissingPoints === missingPoints) {
-                    maxLoop++;
-                } else {
-                    maxLoop = 0;
-                }
-                missingPoints = newMissingPoints;
-                if (missingPoints === 0) break;
-                if (maxLoop > 5) {
-                    this.bot.log(this.bot.isMobile, '搜索-必应-额外', '额外搜索5次未获得积分，中止搜索', 'warn');
-                    return;
-                }
-            }
+             this.bot.log(this.bot.isMobile, '搜索-必应', `搜索完成，但仍有 ${missingPoints} 积分未获取。`, 'warn');
         }
+
         this.bot.log(this.bot.isMobile, '搜索-必应', '完成搜索任务')
     }
 
