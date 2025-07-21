@@ -301,7 +301,7 @@ export class Login {
     
     private async handleVerifyEmailPage(page: Page, email: string) {
         const verifyEmailTitle = page.locator('h1:has-text("验证你的电子邮件"), h1:has-text("Verify your email")');
-        // Use a more robust selector to avoid strict mode violation
+        // 使用更可靠的 getByRole 选择器来避免严格模式冲突
         const usePasswordLink = page.getByRole('button', { name: /Use your password/i });
 
         if (await verifyEmailTitle.isVisible({ timeout: 2000 })) {
