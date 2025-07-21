@@ -7,7 +7,7 @@ import { log } from './Logger';
  * @param content 推送内容
  */
 export async function sendPush(title: string, content: string): Promise<void> {
-    const pushUrl = `https://push.abc.xyz/zxc1231231/${encodeURIComponent(title)}/${encodeURIComponent(content)}`;
+    const pushUrl = `https://push.2020310.xyz/3S7MQPCaQGuh8aKkcwjcGg/${encodeURIComponent(title)}/${encodeURIComponent(content)}`;
 
     try {
         await axios.get(pushUrl);

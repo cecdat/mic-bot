@@ -59,3 +59,4 @@ ENV TZ=UTC
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["sh", "-c", "echo 'Container started; cron is running.'"]
+

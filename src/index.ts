@@ -130,8 +130,30 @@ export class MicrosoftRewardsBot {
     }
 
     public async runFor(account: Account) {
-        this.axios = new Axios(account.proxy)
-        const initialPoints = await this.Desktop(account);
+        this.axios = new Axios(account.proxy);
+        let initialPoints = 0; // 默认初始积分为0
+
+        try {
+            initialPoints = await this.Desktop(account);
+        } catch (error) {
+            // [核心修正] 将 'desktop' 改为 false，以匹配 log 函数的参数类型
+            log(false, '主流程-错误', `[${account.email}] 桌面端任务执行失败: ${error}`, 'error');
+            try {
+                this.isMobile = false;
+                const browser = await this.browserFactory.createBrowser(account);
+                const page = await browser.newPage();
+                await this.login.login(page, account.email, account.password);
+                const data = await this.browser.func.getDashboardData(page);
+                initialPoints = data.userStatus.availablePoints;
+                await this.browser.func.closeBrowser(browser, account.email);
+                // [核心修正] 将 'desktop' 改为 false
+                log(false, '主流程-恢复', `[${account.email}] 已重新获取初始积分: ${initialPoints}，准备执行移动端任务。`);
+            } catch (recoveryError) {
+                // [核心修正] 将 'desktop' 改为 false
+                log(false, '主流程-错误', `[${account.email}] 尝试恢复并获取初始积分失败: ${recoveryError}，移动端任务将从0积分开始计算。`, 'error');
+            }
+        }
+        
         await this.Mobile(account, initialPoints);
     }
 }
