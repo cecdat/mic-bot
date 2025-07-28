@@ -1,7 +1,7 @@
 import { Page } from 'rebrowser-playwright'
-import { platform } from 'os'
-import fs from 'fs'
-import path from 'path'
+// [最终修正] 移除了未使用的 'platform'
+import fs from 'fs' 
+import path from 'path' 
 
 import { Workers } from '../Workers'
 
@@ -9,13 +9,10 @@ import { Counters, DashboardData } from '../../interface/DashboardData'
 
 export class Search extends Workers {
     private bingHome = 'https://bing.com'
-    private searchPageURL = ''
 
     public async doSearch(page: Page, data: DashboardData) {
         this.bot.log(this.bot.isMobile, '搜索-必应', '开始必应搜索')
 
-        page = await this.bot.browser.utils.getLatestTab(page)
-        
         let searchCounters: Counters = data.userStatus.counters;
         let missingPoints = this.calculatePoints(searchCounters)
 
@@ -24,115 +21,90 @@ export class Search extends Workers {
             return
         }
 
-        // 根据剩余积分计算需要的搜索次数，并增加2次冗余
-        const requiredSearches = Math.ceil(missingPoints / 3) + 2;
-        this.bot.log(this.bot.isMobile, '搜索-必应', `需要 ${missingPoints} 积分，将执行 ${requiredSearches} 次搜索。`);
-
         let allQueries = await this.getLocalSearchWords();
-        if (allQueries.length === 0) {
-            this.bot.log(this.bot.isMobile, '搜索-必应', '本地搜索词文件为空或读取失败，将使用默认词条', 'warn');
-            allQueries = ['天气', '新闻', '电影', '音乐', '游戏', '购物', '旅游', '美食', '体育', '科技', '财经', '汽车', '房产', '教育', '健康'];
-        }
-
         const uniqueQueries = [...new Set(allQueries)];
-        const shuffledQueries = this.bot.utils.shuffleArray(uniqueQueries);
-        // 截取所需数量的搜索词
-        const searchQueries = shuffledQueries.slice(0, requiredSearches);
+        let searchQueries: string[];
+
+        if (uniqueQueries.length > 90) {
+            this.bot.log(this.bot.isMobile, '搜索-本地词库', `词库共 ${uniqueQueries.length} 个词，将随机抽取90个使用。`);
+            const shuffledQueries = this.bot.utils.shuffleArray(uniqueQueries);
+            searchQueries = shuffledQueries.slice(0, 90);
+        } else {
+            this.bot.log(this.bot.isMobile, '搜索-本地词库', `词库共 ${uniqueQueries.length} 个词，将全部使用。`);
+            searchQueries = uniqueQueries;
+        }
         
-        await page.goto(this.searchPageURL ? this.searchPageURL : this.bingHome)
-        await this.bot.utils.wait(2000)
-        await this.bot.browser.utils.tryDismissAllMessages(page)
+        if (searchQueries.length === 0) {
+            this.bot.log(this.bot.isMobile, '搜索-必应', '本地搜索词文件为空或读取失败，将使用默认词条', 'warn');
+            searchQueries = ['天气', '新闻', '电影', '音乐', '游戏', '购物', '旅游', '美食', '体育', '科技', '财经', '汽车', '房产', '教育', '健康'];
+        }
+        
+        let maxLoop = 0;
+        let currentQueries = [...searchQueries];
 
-        let maxLoop = 0
+        while (missingPoints > 0 && currentQueries.length > 0 && maxLoop <= 10) {
+            const query = currentQueries.shift()!;
+            this.bot.log(this.bot.isMobile, '搜索-必应', `剩余 ${missingPoints} 积分 | 查询: ${query}`);
 
-        for (const query of searchQueries) {
-            this.bot.log(this.bot.isMobile, '搜索-必应', `剩余 ${missingPoints} 积分 | 查询: ${query}`)
-            searchCounters = await this.bingSearch(page, query)
-            const newMissingPoints = this.calculatePoints(searchCounters)
-            
+            const newCounters = await this.bingSearch(page, query);
+            const newMissingPoints = this.calculatePoints(newCounters);
+
             if (newMissingPoints === missingPoints) {
-                maxLoop++
+                maxLoop++;
+                this.bot.log(this.bot.isMobile, '搜索-必应', `本次搜索未获得积分，连续失败次数: ${maxLoop}/10`, 'warn');
             } else {
-                maxLoop = 0 // 重置计数器
+                maxLoop = 0;
             }
 
-            missingPoints = newMissingPoints
-            if (missingPoints === 0) {
-                this.bot.log(this.bot.isMobile, '搜索-必应', '所有搜索积分已获取完毕！');
-                break;
-            }
-
-            if (maxLoop > 5) {
-                this.bot.log(this.bot.isMobile, '搜索-必应', '连续5次搜索未获得积分，可能已达上限或UA有问题，中止搜索任务。', 'warn')
-                break
-            }
+            missingPoints = newMissingPoints;
+            searchCounters = newCounters;
         }
-        
+
         if (missingPoints > 0) {
-             this.bot.log(this.bot.isMobile, '搜索-必应', `搜索完成，但仍有 ${missingPoints} 积分未获取。`, 'warn');
+            this.bot.log(this.bot.isMobile, '搜索-必应', `搜索任务结束，但仍有 ${missingPoints} 积分未获取。可能是因为连续失败次数过多或搜索词已用尽。`, 'warn');
         }
 
-        this.bot.log(this.bot.isMobile, '搜索-必应', '完成搜索任务')
+        this.bot.log(this.bot.isMobile, '搜索-必应', '完成搜索任务');
     }
 
-    private async bingSearch(searchPage: Page, query: string): Promise<Counters> {
-        const platformControlKey = platform() === 'darwin' ? 'Meta' : 'Control'
+    private async bingSearch(page: Page, query: string): Promise<Counters> {
+        try {
+            await page.goto(this.bingHome, { waitUntil: 'domcontentloaded', timeout: 60000 });
+            await this.bot.browser.utils.tryDismissAllMessages(page);
 
-        for (let i = 0; i < 5; i++) {
-            try {
-                searchPage = await this.bot.browser.utils.getLatestTab(searchPage)
-                await searchPage.evaluate(() => { window.scrollTo(0, 0) })
-                await this.bot.utils.wait(500)
-                const searchBar = '#sb_form_q'
-                await searchPage.waitForSelector(searchBar, { state: 'visible', timeout: 10000 })
-                await searchPage.click(searchBar)
-                await this.bot.utils.wait(500)
-                await searchPage.keyboard.down(platformControlKey)
-                await searchPage.keyboard.press('A')
-                await searchPage.keyboard.press('Backspace')
-                await searchPage.keyboard.up(platformControlKey)
-                await searchPage.keyboard.type(query)
-                await searchPage.keyboard.press('Enter')
-                await this.bot.utils.wait(3000)
+            const searchBar = '#sb_form_q';
+            await page.fill(searchBar, query, { timeout: 15000 });
+            await page.press(searchBar, 'Enter');
 
-                const resultPage = await this.bot.browser.utils.getLatestTab(searchPage)
-                this.searchPageURL = new URL(resultPage.url()).href
-                await this.bot.browser.utils.reloadBadPage(resultPage)
+            await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 60000 });
+            
+            const resultPage = await this.bot.browser.utils.getLatestTab(page);
 
-                if (this.bot.config.searchSettings.scrollRandomResults) {
-                    await this.bot.utils.wait(2000)
-                    await this.randomScroll(resultPage)
-                }
-                if (this.bot.config.searchSettings.clickRandomResults) {
-                    await this.bot.utils.wait(2000)
-                    await this.clickRandomLink(resultPage)
-                }
-
-                await this.bot.utils.wait(Math.floor(this.bot.utils.randomNumber(this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.min), this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.max))))
-                
-                const latestData = await this.bot.browser.func.getDashboardData(searchPage);
-                return latestData.userStatus.counters;
-
-            } catch (error) {
-                if (i === 5) {
-                    this.bot.log(this.bot.isMobile, '搜索-必应', `重试5次后失败... 发生错误: ${error}`, 'error')
-                    break
-                }
-                this.bot.log(this.bot.isMobile, '搜索-必应', `搜索失败，发生错误: ${error}`, 'error')
-                const lastTab = await this.bot.browser.utils.getLatestTab(searchPage)
-                await this.closeTabs(lastTab)
-                await this.bot.utils.wait(4000)
+            if (this.bot.config.searchSettings.scrollRandomResults) {
+                await this.bot.utils.wait(1000);
+                await this.randomScroll(resultPage);
             }
+            if (this.bot.config.searchSettings.clickRandomResults) {
+                await this.bot.utils.wait(1000);
+                await this.clickRandomLink(resultPage);
+            }
+
+            const delay = Math.floor(this.bot.utils.randomNumber(
+                this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.min),
+                this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.max)
+            ));
+            await this.bot.utils.wait(delay);
+
+        } catch (error) {
+            this.bot.log(this.bot.isMobile, '搜索-必应', `单次搜索失败: ${error}`, 'error');
         }
 
-        this.bot.log(this.bot.isMobile, '搜索-必应', '重试5次后搜索失败，结束', 'error')
-        const latestData = await this.bot.browser.func.getDashboardData(searchPage);
+        const latestData = await this.bot.browser.func.getDashboardData(page);
         return latestData.userStatus.counters;
     }
 
     private async getLocalSearchWords(): Promise<string[]> {
         const filePath = path.join(__dirname, '..', '..', 'search_terms.txt');
-        this.bot.log(this.bot.isMobile, '搜索-本地词库', `正在从 ${filePath} 读取搜索词...`);
         try {
             if (!fs.existsSync(filePath)) {
                 this.bot.log(this.bot.isMobile, '搜索-本地词库', 'search_terms.txt 文件不存在', 'warn');
@@ -140,7 +112,6 @@ export class Search extends Workers {
             }
             const fileContent = fs.readFileSync(filePath, 'utf-8');
             const terms = fileContent.split('\n').map(term => term.trim()).filter(term => term.length > 0);
-            this.bot.log(this.bot.isMobile, '搜索-本地词库', `成功读取 ${terms.length} 个搜索词`);
             return terms;
         } catch (error) {
             this.bot.log(this.bot.isMobile, '搜索-本地词库', `读取本地搜索词文件时发生错误: ${error}`, 'error');
@@ -164,42 +135,8 @@ export class Search extends Workers {
     private async clickRandomLink(page: Page) {
         try {
             await page.click('#b_results .b_algo h2', { timeout: 2000 }).catch(() => { })
-            await this.closeContinuePopup(page)
-            await this.bot.utils.wait(10000)
-            let lastTab = await this.bot.browser.utils.getLatestTab(page)
-            let lastTabURL = new URL(lastTab.url())
-            let i = 0
-            while (lastTabURL.href !== this.searchPageURL && i < 5) {
-                await this.closeTabs(lastTab)
-                lastTab = await this.bot.browser.utils.getLatestTab(page)
-                lastTabURL = new URL(lastTab.url())
-                i++
-            }
         } catch (error) {
             this.bot.log(this.bot.isMobile, '搜索-随机点击', `发生错误: ${error}`, 'error')
-        }
-    }
-
-    private async closeTabs(lastTab: Page) {
-        const browser = lastTab.context()
-        const tabs = browser.pages()
-        try {
-            if (tabs.length > 2) {
-                await lastTab.close()
-                this.bot.log(this.bot.isMobile, '搜索-关闭标签页', `打开了超过2个标签页，已关闭最后一个: "${new URL(lastTab.url()).host}"`)
-            } else if (tabs.length === 1) {
-                const newPage = await browser.newPage()
-                await this.bot.utils.wait(1000)
-                await newPage.goto(this.bingHome)
-                await this.bot.utils.wait(3000)
-                this.searchPageURL = newPage.url()
-                this.bot.log(this.bot.isMobile, '搜索-关闭标签页', '只打开了1个标签页，已创建一个新的')
-            } else {
-                lastTab = await this.bot.browser.utils.getLatestTab(lastTab)
-                await lastTab.goto(this.searchPageURL ? this.searchPageURL : this.bingHome)
-            }
-        } catch (error) {
-            this.bot.log(this.bot.isMobile, '搜索-关闭标签页', `发生错误: ${error}`, 'error')
         }
     }
 
@@ -212,15 +149,5 @@ export class Search extends Workers {
             : (edgeData ? edgeData.pointProgressMax - edgeData.pointProgress : 0)
             + (genericData ? genericData.pointProgressMax - genericData.pointProgress : 0)
         return missingPoints
-    }
-
-    private async closeContinuePopup(page: Page) {
-        try {
-            await page.waitForSelector('#sacs_close', { timeout: 1000 })
-            const continueButton = await page.$('#sacs_close')
-            if (continueButton) {
-                await continueButton.click()
-            }
-        } catch (error) {}
     }
 }
