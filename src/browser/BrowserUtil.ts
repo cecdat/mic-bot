@@ -13,7 +13,7 @@ export default class BrowserUtil {
 
     /**
      * [最终修正] 增强弹窗处理能力
-     * @param page 
+     * @param page
      */
     async tryDismissAllMessages(page: Page): Promise<void> {
         const buttons = [
@@ -47,13 +47,34 @@ export default class BrowserUtil {
             await this.bot.utils.wait(1000)
             const browser = page.context()
             const pages = browser.pages()
-            const newTab = pages[pages.length - 1]
-            if (newTab) {
-                return newTab
+
+            if (page.isClosed()) {
+                const errorMsg = '无法获取最新的标签页，因为当前页面已关闭。';
+                await this.bot.log(this.bot.isMobile, '获取新标签页', errorMsg, 'error');
+                throw new Error(errorMsg);
             }
-            throw this.bot.log(this.bot.isMobile, '获取新标签页', '无法获取最新的标签页', 'error')
+
+            if (pages.length === 0) {
+                const errorMsg = '无法获取最新的标签页，因为浏览器没有打开的页面。';
+                await this.bot.log(this.bot.isMobile, '获取新标签页', errorMsg, 'error');
+                throw new Error(errorMsg);
+            }
+
+            const newTab = pages[pages.length - 1];
+
+            // [最终修复] 明确检查 undefined，让 TypeScript 编译器满意
+            if (!newTab) {
+                const errorMsg = '无法获取最新的标签页，未能从页面列表中找到最后一个标签。';
+                await this.bot.log(this.bot.isMobile, '获取新标签页', errorMsg, 'error');
+                throw new Error(errorMsg);
+            }
+
+            return newTab;
+
         } catch (error) {
-            throw this.bot.log(this.bot.isMobile, '获取新标签页', `发生错误: ${error}`, 'error')
+            const errorMsg = `获取最新标签页时发生错误: ${error instanceof Error ? error.message : String(error)}`;
+            await this.bot.log(this.bot.isMobile, '获取新标签页', errorMsg, 'error');
+            throw new Error(errorMsg);
         }
     }
 
@@ -66,17 +87,23 @@ export default class BrowserUtil {
             let homeTabURL: URL
 
             if (!homeTab) {
-                throw this.bot.log(this.bot.isMobile, '获取标签页', '找不到主页标签！', 'error')
+                const errorMsg = '找不到主页标签！';
+                await this.bot.log(this.bot.isMobile, '获取标签页', errorMsg, 'error');
+                throw new Error(errorMsg);
             } else {
                 homeTabURL = new URL(homeTab.url())
                 if (homeTabURL.hostname !== 'rewards.bing.com') {
-                    throw this.bot.log(this.bot.isMobile, '获取标签页', '奖励页面主机名无效: ' + homeTabURL.host, 'error')
+                    const errorMsg = '奖励页面主机名无效: ' + homeTabURL.host;
+                    await this.bot.log(this.bot.isMobile, '获取标签页', errorMsg, 'error');
+                    throw new Error(errorMsg);
                 }
             }
 
             const workerTab = pages[2]
             if (!workerTab) {
-                throw this.bot.log(this.bot.isMobile, '获取标签页', '找不到工作标签！', 'error')
+                const errorMsg = '找不到工作标签！';
+                await this.bot.log(this.bot.isMobile, '获取标签页', errorMsg, 'error');
+                throw new Error(errorMsg);
             }
 
             return {
@@ -84,7 +111,9 @@ export default class BrowserUtil {
                 workerTab: workerTab
             }
         } catch (error) {
-            throw this.bot.log(this.bot.isMobile, '获取标签页', `发生错误: ${error}`, 'error')
+            const errorMsg = `获取标签页时发生错误: ${error instanceof Error ? error.message : String(error)}`;
+            await this.bot.log(this.bot.isMobile, '获取标签页', errorMsg, 'error');
+            throw new Error(errorMsg);
         }
     }
 
@@ -98,7 +127,9 @@ export default class BrowserUtil {
                 await page.reload()
             }
         } catch (error) {
-            throw this.bot.log(this.bot.isMobile, '重新加载坏页', `发生错误: ${error}`, 'error')
+            const errorMsg = `重新加载坏页时发生错误: ${error instanceof Error ? error.message : String(error)}`;
+            await this.bot.log(this.bot.isMobile, '重新加载坏页', errorMsg, 'error');
+            throw new Error(errorMsg);
         }
     }
 }

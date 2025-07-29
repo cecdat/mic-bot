@@ -16,7 +16,8 @@ export class UrlReward extends Workers {
             this.bot.log(this.bot.isMobile, 'URL奖励', '成功完成URL奖励')
         } catch (error) {
             await page.close()
-            this.bot.log(this.bot.isMobile, 'URL奖励', `发生错误: ${error}`, 'error')
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.bot.log(this.bot.isMobile, 'URL奖励', `发生错误: ${errorMessage}`, 'error')
         }
     }
 

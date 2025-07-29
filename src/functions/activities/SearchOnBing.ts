@@ -32,7 +32,8 @@ export class SearchOnBing extends Workers {
             this.bot.log(this.bot.isMobile, 'SEARCH-ON-BING', 'Completed the SearchOnBing successfully')
         } catch (error) {
             await page.close()
-            this.bot.log(this.bot.isMobile, 'SEARCH-ON-BING', 'An error occurred:' + error, 'error')
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.bot.log(this.bot.isMobile, 'SEARCH-ON-BING', `An error occurred: ${errorMessage}`, 'error')
         }
     }
 
@@ -64,7 +65,8 @@ export class SearchOnBing extends Workers {
             return answer
 
         } catch (error) {
-            this.bot.log(this.bot.isMobile, 'SEARCH-ON-BING-QUERY', 'An error occurred:' + error, 'error')
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.bot.log(this.bot.isMobile, 'SEARCH-ON-BING-QUERY', `An error occurred: ${errorMessage}`, 'error')
             return title
         }
     }

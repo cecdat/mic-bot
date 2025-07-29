@@ -20,8 +20,9 @@ export class Workers {
         }
         this.bot.log(this.bot.isMobile, '每日任务', '开始解决“每日任务”项')
         await this.solveActivities(page, activitiesUncompleted)
-        page = await this.bot.browser.utils.getLatestTab(page)
-        await this.bot.browser.func.goHome(page)
+        // [修复] 确保在任务完成后，我们操作的是一个有效的页面
+        const latestPage = await this.bot.browser.utils.getLatestTab(page).catch(() => page)
+        await this.bot.browser.func.goHome(latestPage)
         this.bot.log(this.bot.isMobile, '每日任务', '所有“每日任务”项已完成')
     }
 
@@ -36,18 +37,19 @@ export class Workers {
                 this.bot.log(this.bot.isMobile, '打卡任务', `跳过打卡任务 "${punchCard.name}" | 原因: 父推广活动缺失！`, 'warn')
                 continue
             }
-            page = await this.bot.browser.utils.getLatestTab(page)
+            let currentPage = await this.bot.browser.utils.getLatestTab(page).catch(() => page)
             const activitiesUncompleted = punchCard.childPromotions.filter(x => !x.complete)
             this.bot.log(this.bot.isMobile, '打卡任务', `开始为打卡任务解决项目: "${punchCard.parentPromotion.title}"`)
-            await page.goto(punchCard.parentPromotion.destinationUrl, { referer: this.bot.config.baseURL })
-            await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => { })
-            await this.solveActivities(page, activitiesUncompleted, punchCard)
-            page = await this.bot.browser.utils.getLatestTab(page)
-            const pages = page.context().pages()
+            await currentPage.goto(punchCard.parentPromotion.destinationUrl, { referer: this.bot.config.baseURL })
+            await currentPage.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => { })
+            await this.solveActivities(currentPage, activitiesUncompleted, punchCard)
+            
+            currentPage = await this.bot.browser.utils.getLatestTab(page).catch(() => page)
+            const pages = currentPage.context().pages()
             if (pages.length > 3) {
-                await page.close()
+                await currentPage.close().catch(() => {})
             } else {
-                await this.bot.browser.func.goHome(page)
+                await this.bot.browser.func.goHome(currentPage)
             }
             this.bot.log(this.bot.isMobile, '打卡任务', `打卡任务的所有项目: "${punchCard.parentPromotion.title}" 已完成`)
         }
@@ -65,51 +67,49 @@ export class Workers {
             return
         }
         this.bot.log(this.bot.isMobile, '更多推广', '开始解决“更多推广”项')
-        page = await this.bot.browser.utils.getLatestTab(page)
-        await this.solveActivities(page, activitiesUncompleted)
-        page = await this.bot.browser.utils.getLatestTab(page)
-        await this.bot.browser.func.goHome(page)
+        let currentPage = await this.bot.browser.utils.getLatestTab(page).catch(() => page)
+        await this.solveActivities(currentPage, activitiesUncompleted)
+        currentPage = await this.bot.browser.utils.getLatestTab(page).catch(() => page)
+        await this.bot.browser.func.goHome(currentPage)
         this.bot.log(this.bot.isMobile, '更多推广', '所有“更多推广”项已完成')
     }
 
-    /**
-     * [最终修正] 恢复对 selector 变量的正确使用
-     * @param activityPage 
-     * @param activities 
-     * @param punchCard 
-     */
-    private async solveActivities(activityPage: Page, activities: PromotionalItem[] | MorePromotion[], punchCard?: PunchCard) {
-        const activityInitial = activityPage.url()
+    private async solveActivities(dashboardPage: Page, activities: PromotionalItem[] | MorePromotion[], punchCard?: PunchCard) {
+        const activityInitial = dashboardPage.url()
 
         for (const activity of activities) {
             try {
-                activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
-                const pages = activityPage.context().pages()
+                // [修复] 始终从稳定的 dashboardPage 获取上下文，而不是依赖可能已关闭的页面
+                let currentPage = await this.bot.browser.utils.getLatestTab(dashboardPage);
+
+                const pages = currentPage.context().pages()
                 if (pages.length > 3) {
-                    await activityPage.close()
-                    activityPage = await this.bot.browser.utils.getLatestTab(activityPage)
+                    await currentPage.close().catch(() => {}) // 安全关闭多余页面
+                    currentPage = await this.bot.browser.utils.getLatestTab(dashboardPage);
                 }
                 await this.bot.utils.wait(1000)
-                if (activityPage.url() !== activityInitial) {
-                    await activityPage.goto(activityInitial)
+
+                if (currentPage.url() !== activityInitial) {
+                    await currentPage.goto(activityInitial)
                 }
 
                 this.bot.log(this.bot.isMobile, '活动', '正在检查并关闭可能的弹窗...');
-                await this.bot.browser.utils.tryDismissAllMessages(activityPage);
+                await this.bot.browser.utils.tryDismissAllMessages(currentPage);
                 
                 let selector = `[data-bi-id^="${activity.offerId}"] .pointLink:not(.contentContainer .pointLink)`
                 if (punchCard) {
-                    selector = await this.bot.browser.func.getPunchCardActivity(activityPage, activity)
+                    selector = await this.bot.browser.func.getPunchCardActivity(currentPage, activity)
                 } else if (activity.name.toLowerCase().includes('membercenter') || activity.name.toLowerCase().includes('exploreonbing')) {
                     selector = `[data-bi-id^="${activity.name}"] .pointLink:not(.contentContainer .pointLink)`
                 }
 
-                await activityPage.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => { })
+                await currentPage.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => { })
                 await this.bot.utils.wait(2000)
 
-                // [核心修正] 在点击之后，再执行 switch 逻辑
-                await activityPage.click(selector);
-                activityPage = await this.bot.browser.utils.getLatestTab(activityPage);
+                await currentPage.click(selector, { force: true });
+                
+                // [修复] 点击后，将新打开的标签页赋值给一个局部变量
+                const activityTab = await this.bot.browser.utils.getLatestTab(currentPage);
                 
                 switch (activity.promotionType) {
                     case 'quiz':
@@ -117,19 +117,19 @@ export class Workers {
                             case 10:
                                 if (activity.destinationUrl.toLowerCase().includes('pollscenarioid')) {
                                     this.bot.log(this.bot.isMobile, '活动', `发现活动类型: "投票" 标题: "${activity.title}"`)
-                                    await this.bot.activities.doPoll(activityPage)
+                                    await this.bot.activities.doPoll(activityTab)
                                 } else {
                                     this.bot.log(this.bot.isMobile, '活动', `发现活动类型: "ABC" 标题: "${activity.title}"`)
-                                    await this.bot.activities.doABC(activityPage)
+                                    await this.bot.activities.doABC(activityTab)
                                 }
                                 break
                             case 50:
                                 this.bot.log(this.bot.isMobile, '活动', `发现活动类型: "ThisOrThat" 标题: "${activity.title}"`)
-                                await this.bot.activities.doThisOrThat(activityPage)
+                                await this.bot.activities.doThisOrThat(activityTab)
                                 break
                             default:
                                 this.bot.log(this.bot.isMobile, '活动', `发现活动类型: "测验" 标题: "${activity.title}"`)
-                                await this.bot.activities.doQuiz(activityPage)
+                                await this.bot.activities.doQuiz(activityTab)
                                 break
                         }
                         break
@@ -137,10 +137,10 @@ export class Workers {
                     case 'urlreward':
                         if (activity.name.toLowerCase().includes('exploreonbing')) {
                             this.bot.log(this.bot.isMobile, '活动', `发现活动类型: "在必应上搜索" 标题: "${activity.title}"`)
-                            await this.bot.activities.doSearchOnBing(activityPage, activity)
+                            await this.bot.activities.doSearchOnBing(activityTab, activity)
                         } else {
                             this.bot.log(this.bot.isMobile, '活动', `发现活动类型: "URL奖励" 标题: "${activity.title}"`)
-                            await this.bot.activities.doUrlReward(activityPage)
+                            await this.bot.activities.doUrlReward(activityTab)
                         }
                         break
 
@@ -150,7 +150,8 @@ export class Workers {
                 }
                 await this.bot.utils.wait(2000)
             } catch (error) {
-                this.bot.log(this.bot.isMobile, '活动', `发生错误: ${error}`, 'error')
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                this.bot.log(this.bot.isMobile, '活动', `发生错误: ${errorMessage}`, 'error')
             }
         }
     }

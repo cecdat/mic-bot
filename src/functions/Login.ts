@@ -28,7 +28,8 @@ export class Login {
                 await page.goto(url, { timeout: navigationTimeoutMs, waitUntil: 'domcontentloaded' });
                 return;
             } catch (error) {
-                this.bot.log(this.bot.isMobile, '页面导航', `导航到 ${url} 失败，尝试次数 ${i + 1}/${retries}。错误: ${error}`, 'warn');
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                this.bot.log(this.bot.isMobile, '页面导航', `导航到 ${url} 失败，尝试次数 ${i + 1}/${retries}。错误: ${errorMessage}`, 'warn');
                 if (i === retries - 1) throw error;
                 await this.bot.utils.wait(3000);
             }
@@ -52,7 +53,9 @@ export class Login {
             await saveSessionData(this.bot.config.sessionPath, page.context(), email, this.bot.isMobile);
             this.bot.log(this.bot.isMobile, '登录', `[${email}] 登录成功，并已保存登录会话！`);
         } catch (error) {
-            throw this.bot.log(this.bot.isMobile, '登录', `[${email}] 发生错误: ${error}`, 'error');
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.bot.log(this.bot.isMobile, '登录', `[${email}] 发生错误: ${errorMessage}`, 'error');
+            throw new Error(errorMessage);
         }
     }
 
@@ -66,8 +69,9 @@ export class Login {
             await this.checkLoggedIn(page, email);
             this.bot.log(this.bot.isMobile, '登录', `[${email}] 成功登录到微软账户`);
         } catch (error) {
-            this.bot.log(this.bot.isMobile, '登录', `[${email}] 发生错误: ${error}`, 'error');
-            throw error;
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.bot.log(this.bot.isMobile, '登录', `[${email}] 发生错误: ${errorMessage}`, 'error');
+            throw new Error(errorMessage);
         }
     }
 
@@ -102,7 +106,8 @@ export class Login {
                 this.bot.log(this.bot.isMobile, '登录', `[${email}] 输入邮箱后未找到“下一步”按钮`, 'warn');
             }
         } catch (error) {
-            this.bot.log(this.bot.isMobile, '登录', `[${email}] 邮箱输入失败: ${error}`, 'error');
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.bot.log(this.bot.isMobile, '登录', `[${email}] 邮箱输入失败: ${errorMessage}`, 'error');
         }
     }
 
@@ -129,7 +134,8 @@ export class Login {
                 this.bot.log(this.bot.isMobile, '登录', '输入密码后未找到“下一步”按钮', 'warn');
             }
         } catch (error) {
-            this.bot.log(this.bot.isMobile, '登录', `密码输入失败: ${error}`, 'error');
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.bot.log(this.bot.isMobile, '登录', `密码输入失败: ${errorMessage}`, 'error');
             await this.handle2FA(page);
         }
     }
@@ -139,7 +145,8 @@ export class Login {
             const numberToPress = await this.get2FACode(page);
             await this.authAppVerification(page, numberToPress);
         } catch (error) {
-            this.bot.log(this.bot.isMobile, '登录', `2FA处理失败: ${error}`, 'error');
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.bot.log(this.bot.isMobile, '登录', `2FA处理失败: ${errorMessage}`, 'error');
         }
     }
 
@@ -276,7 +283,8 @@ export class Login {
             await page.waitForSelector('html[data-role-name="RewardsPortal"]', { timeout: 10000 });
             this.bot.log(this.bot.isMobile, '登录', `[${email}] 成功登录到奖励门户`);
         } catch (error) {
-            this.bot.log(this.bot.isMobile, '登录', `[${email}] 验证登录状态时超时或失败: ${error}`, 'error');
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.bot.log(this.bot.isMobile, '登录', `[${email}] 验证登录状态时超时或失败: ${errorMessage}`, 'error');
             if (this.bot.config.debug) {
                 await this.saveSnapshot(page, email, 'login_failure_snapshot.html');
             }
@@ -328,7 +336,8 @@ export class Login {
             fs.writeFileSync(snapshotPath, htmlContent);
             this.bot.log(this.bot.isMobile, '调试模式', `页面快照已成功保存到: ${snapshotPath}`, 'log', 'green');
         } catch (e) {
-            this.bot.log(this.bot.isMobile, '调试模式', `保存页面快照失败: ${e}`, 'error');
+            const errorMessage = e instanceof Error ? e.message : String(e);
+            this.bot.log(this.bot.isMobile, '调试模式', `保存页面快照失败: ${errorMessage}`, 'error');
         }
     }
 
@@ -338,7 +347,9 @@ export class Login {
         if (isLocked) {
             const email = await page.evaluate(() => (document.querySelector('#i0116') as HTMLInputElement | null)?.value || '未知邮箱');
             await sendPush('微软账户异常', `账户 ${email} 已被锁定！`);
-            throw this.bot.log(this.bot.isMobile, '检查锁定', '此账户已被锁定！请从 "accounts.json" 中移除该账户并重启！', 'error');
+            const errorMsg = '此账户已被锁定！请从 "accounts.json" 中移除该账户并重启！';
+            this.bot.log(this.bot.isMobile, '检查锁定', errorMsg, 'error');
+            throw new Error(errorMsg);
         }
     }
 }

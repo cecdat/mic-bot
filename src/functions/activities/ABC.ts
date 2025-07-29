@@ -45,7 +45,8 @@ export class ABC extends Workers {
 
         } catch (error) {
             await page.close()
-            this.bot.log(this.bot.isMobile, 'ABC', 'An error occurred:' + error, 'error')
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.bot.log(this.bot.isMobile, 'ABC', `An error occurred: ${errorMessage}`, 'error')
         }
     }
 

@@ -7,7 +7,7 @@ import BrowserUtil from './browser/BrowserUtil'
 
 import { log } from './util/Logger'
 import Util from './util/Utils'
-import { loadAccounts, loadConfig } from './util/Load'
+import { loadAccounts, loadConfig, loadDailyPoints, saveDailyPoints } from './util/Load'
 import { sendPush } from './util/Push'
 
 import { Login } from './functions/Login'
@@ -47,7 +47,7 @@ export class MicrosoftRewardsBot {
         this.config = loadConfig()
     }
     
-    private async Desktop(account: Account) {
+    private async Desktop(account: Account): Promise<number> {
         this.isMobile = false;
         const browser = await this.browserFactory.createBrowser(account)
         const page = await browser.newPage()
@@ -56,8 +56,22 @@ export class MicrosoftRewardsBot {
         await this.login.login(page, account.email, account.password)
         
         const data = await this.browser.func.getDashboardData(page);
-        const initialPoints = data.userStatus.availablePoints;
-        log(this.isMobile, '积分统计', `[${account.email}] 初始积分: ${initialPoints}`);
+        
+        // [核心修改] 每日积分记录逻辑
+        const todayStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+        const dailyPointsData = await loadDailyPoints(this.config.sessionPath, account.email);
+        let initialPointsToday: number;
+
+        if (dailyPointsData && dailyPointsData.date === todayStr) {
+            // 如果是今天，直接使用记录的初始积分
+            initialPointsToday = dailyPointsData.initialPoints;
+            log(this.isMobile, '积分统计', `[${account.email}] 读取到今日初始积分: ${initialPointsToday}`);
+        } else {
+            // 如果是新的一天或没有记录，记录新的初始积分
+            initialPointsToday = data.userStatus.availablePoints;
+            await saveDailyPoints(this.config.sessionPath, account.email, { date: todayStr, initialPoints: initialPointsToday });
+            log(this.isMobile, '积分统计', `[${account.email}] 记录今日新的初始积分: ${initialPointsToday}`);
+        }
         
         const browserEnarablePoints = this.browser.func.getBrowserEarnablePoints(data);
         const pointsCanCollect = browserEnarablePoints.dailySetPoints + browserEnarablePoints.desktopSearchPoints + browserEnarablePoints.morePromotionsPoints
@@ -75,10 +89,10 @@ export class MicrosoftRewardsBot {
         }
         
         await this.browser.func.closeBrowser(browser, account.email)
-        return initialPoints;
+        return initialPointsToday; // 返回今天的初始积分
     }
 
-    private async Mobile(account: Account, initialPoints: number) {
+    private async Mobile(account: Account, initialPointsToday: number) {
         this.isMobile = true;
         const browser = await this.browserFactory.createBrowser(account)
         const page = await browser.newPage()
@@ -120,8 +134,10 @@ export class MicrosoftRewardsBot {
         
         const finalData = await this.browser.func.getDashboardData(page);
         const finalPoints = finalData.userStatus.availablePoints;
-        const totalPointsCollected = finalPoints - initialPoints;
-        const summaryMessage = `账户 ${account.email} 今日共获得 ${totalPointsCollected} 积分 (初始: ${initialPoints}, 最终: ${finalPoints})。`;
+        
+        // [核心修改] 使用今天的初始积分进行计算
+        const totalPointsCollected = finalPoints - initialPointsToday;
+        const summaryMessage = `账户 ${account.email} 今日共获得 ${totalPointsCollected} 积分 (初始: ${initialPointsToday}, 最终: ${finalPoints})。`;
         
         log(this.isMobile, '积分统计', summaryMessage, 'log', 'green');
         await sendPush('每日积分统计', summaryMessage);
@@ -131,30 +147,39 @@ export class MicrosoftRewardsBot {
 
     public async runFor(account: Account) {
         this.axios = new Axios(account.proxy);
-        let initialPoints = 0; // 默认初始积分为0
+        let initialPointsToday = 0;
 
         try {
-            initialPoints = await this.Desktop(account);
+            initialPointsToday = await this.Desktop(account);
         } catch (error) {
-            // [核心修正] 将 'desktop' 改为 false，以匹配 log 函数的参数类型
-            log(false, '主流程-错误', `[${account.email}] 桌面端任务执行失败: ${error}`, 'error');
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            log(false, '主流程-错误', `[${account.email}] 桌面端任务执行失败: ${errorMessage}`, 'error');
             try {
+                // [核心修改] 即使桌面端失败，也要确保能正确获取或记录当日初始积分
                 this.isMobile = false;
                 const browser = await this.browserFactory.createBrowser(account);
                 const page = await browser.newPage();
                 await this.login.login(page, account.email, account.password);
-                const data = await this.browser.func.getDashboardData(page);
-                initialPoints = data.userStatus.availablePoints;
+                
+                const todayStr = new Date().toISOString().slice(0, 10);
+                const dailyPointsData = await loadDailyPoints(this.config.sessionPath, account.email);
+                if (dailyPointsData && dailyPointsData.date === todayStr) {
+                    initialPointsToday = dailyPointsData.initialPoints;
+                } else {
+                    const data = await this.browser.func.getDashboardData(page);
+                    initialPointsToday = data.userStatus.availablePoints;
+                    await saveDailyPoints(this.config.sessionPath, account.email, { date: todayStr, initialPoints: initialPointsToday });
+                }
+                
                 await this.browser.func.closeBrowser(browser, account.email);
-                // [核心修正] 将 'desktop' 改为 false
-                log(false, '主流程-恢复', `[${account.email}] 已重新获取初始积分: ${initialPoints}，准备执行移动端任务。`);
+                log(false, '主流程-恢复', `[${account.email}] 已重新获取今日初始积分: ${initialPointsToday}，准备执行移动端任务。`);
             } catch (recoveryError) {
-                // [核心修正] 将 'desktop' 改为 false
-                log(false, '主流程-错误', `[${account.email}] 尝试恢复并获取初始积分失败: ${recoveryError}，移动端任务将从0积分开始计算。`, 'error');
+                const recoveryErrorMessage = recoveryError instanceof Error ? recoveryError.message : String(recoveryError);
+                log(false, '主流程-错误', `[${account.email}] 尝试恢复并获取初始积分失败: ${recoveryErrorMessage}，移动端任务将从0积分开始计算。`, 'error');
             }
         }
         
-        await this.Mobile(account, initialPoints);
+        await this.Mobile(account, initialPointsToday);
     }
 }
 
@@ -165,7 +190,8 @@ async function runTasksForAccounts(accounts: Account[]) {
             const bot = new MicrosoftRewardsBot();
             await bot.runFor(account);
         } catch (error) {
-            log('main', '主进程-WORKER', `账户 ${account.email} 的任务执行失败: ${error}`, 'error');
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            log('main', '主进程-WORKER', `账户 ${account.email} 的任务执行失败: ${errorMessage}`, 'error');
         }
         log('main', '主进程-WORKER', `完成账户 ${account.email} 的所有任务流程。`, 'log', 'green');
     }
@@ -206,6 +232,7 @@ async function main() {
 }
 
 main().catch(error => {
-    log('main', '主进程-错误', `运行机器人时发生致命错误: ${error}`, 'error');
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    log('main', '主进程-错误', `运行机器人时发生致命错误: ${errorMessage}`, 'error');
     process.exit(1);
 });

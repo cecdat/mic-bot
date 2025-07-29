@@ -40,7 +40,8 @@ export class ThisOrThat extends Workers {
             this.bot.log(this.bot.isMobile, '二选一', '成功完成二选一问答')
         } catch (error) {
             await page.close()
-            this.bot.log(this.bot.isMobile, '二选一', `发生错误: ${error}`, 'error')
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.bot.log(this.bot.isMobile, '二选一', `发生错误: ${errorMessage}`, 'error')
         }
     }
 

@@ -25,16 +25,13 @@ export class Search extends Workers {
         const uniqueQueries = [...new Set(allQueries)];
         let searchQueries: string[];
 
-        if (uniqueQueries.length > 90) {
-            this.bot.log(this.bot.isMobile, '搜索-本地词库', `词库共 ${uniqueQueries.length} 个词，将随机抽取90个使用。`);
+        if (uniqueQueries.length > 0) {
+            // [优化] 根据剩余积分动态计算需要抽取的搜索词数量
+            const requiredSearches = Math.ceil(missingPoints / 3) + 2;
+            this.bot.log(this.bot.isMobile, '搜索-本地词库', `剩余 ${missingPoints} 积分，将从 ${uniqueQueries.length} 个词中随机抽取 ${requiredSearches} 个进行搜索。`);
             const shuffledQueries = this.bot.utils.shuffleArray(uniqueQueries);
-            searchQueries = shuffledQueries.slice(0, 90);
+            searchQueries = shuffledQueries.slice(0, requiredSearches);
         } else {
-            this.bot.log(this.bot.isMobile, '搜索-本地词库', `词库共 ${uniqueQueries.length} 个词，将全部使用。`);
-            searchQueries = uniqueQueries;
-        }
-        
-        if (searchQueries.length === 0) {
             this.bot.log(this.bot.isMobile, '搜索-必应', '本地搜索词文件为空或读取失败，将使用默认词条', 'warn');
             searchQueries = ['天气', '新闻', '电影', '音乐', '游戏', '购物', '旅游', '美食', '体育', '科技', '财经', '汽车', '房产', '教育', '健康'];
         }
@@ -76,7 +73,8 @@ export class Search extends Workers {
             await page.fill(searchBar, query, { timeout: 15000 });
             await page.press(searchBar, 'Enter');
 
-            await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 60000 });
+            const navigationTimeoutMs = this.bot.utils.stringToMs(this.bot.config.navigationTimeout);
+            await page.waitForSelector('#b_results', { timeout: navigationTimeoutMs });
             
             const resultPage = await this.bot.browser.utils.getLatestTab(page);
 
@@ -96,7 +94,8 @@ export class Search extends Workers {
             await this.bot.utils.wait(delay);
 
         } catch (error) {
-            this.bot.log(this.bot.isMobile, '搜索-必应', `单次搜索失败: ${error}`, 'error');
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.bot.log(this.bot.isMobile, '搜索-必应', `单次搜索失败: ${errorMessage}`, 'error');
         }
 
         const latestData = await this.bot.browser.func.getDashboardData(page);
@@ -114,7 +113,8 @@ export class Search extends Workers {
             const terms = fileContent.split('\n').map(term => term.trim()).filter(term => term.length > 0);
             return terms;
         } catch (error) {
-            this.bot.log(this.bot.isMobile, '搜索-本地词库', `读取本地搜索词文件时发生错误: ${error}`, 'error');
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.bot.log(this.bot.isMobile, '搜索-本地词库', `读取本地搜索词文件时发生错误: ${errorMessage}`, 'error');
             return [];
         }
     }
@@ -128,7 +128,8 @@ export class Search extends Workers {
                 window.scrollTo(0, scrollPos)
             }, randomScrollPosition)
         } catch (error) {
-            this.bot.log(this.bot.isMobile, '搜索-随机滚动', `发生错误: ${error}`, 'error')
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.bot.log(this.bot.isMobile, '搜索-随机滚动', `发生错误: ${errorMessage}`, 'error')
         }
     }
 
@@ -136,7 +137,8 @@ export class Search extends Workers {
         try {
             await page.click('#b_results .b_algo h2', { timeout: 2000 }).catch(() => { })
         } catch (error) {
-            this.bot.log(this.bot.isMobile, '搜索-随机点击', `发生错误: ${error}`, 'error')
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.bot.log(this.bot.isMobile, '搜索-随机点击', `发生错误: ${errorMessage}`, 'error')
         }
     }
 
