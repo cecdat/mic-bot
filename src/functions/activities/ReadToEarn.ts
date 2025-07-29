@@ -8,7 +8,7 @@ import { DashboardData } from '../../interface/DashboardData'
 
 export class ReadToEarn extends Workers {
     public async doReadToEarn(accessToken: string, data: DashboardData) {
-        this.bot.log(this.bot.isMobile, 'READ-TO-EARN', 'Starting Read to Earn')
+        this.bot.log(this.bot.isMobile, '阅读文章', '开始执行“阅读文章”任务')
 
         try {
             let geoLocale = data.userProfile.attributes.country
@@ -56,19 +56,20 @@ export class ReadToEarn extends Workers {
                 const newBalance = (await claimResponse.data).response.balance
 
                 if (newBalance == userBalance) {
-                    this.bot.log(this.bot.isMobile, 'READ-TO-EARN', 'Read all available articles')
+                    this.bot.log(this.bot.isMobile, '阅读文章', '已阅读所有可用文章')
                     break
                 } else {
-                    this.bot.log(this.bot.isMobile, 'READ-TO-EARN', `Read article ${i + 1} of ${articleCount} max | Gained ${newBalance - userBalance} Points`)
+                    // [核心修改] 将日志内容中文化
+                    this.bot.log(this.bot.isMobile, '阅读文章', `阅读文章 ${i + 1} / ${articleCount} | 获得 ${newBalance - userBalance} 积分`)
                     userBalance = newBalance
                     await this.bot.utils.wait(Math.floor(this.bot.utils.randomNumber(this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.min), this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.max))))
                 }
             }
 
-            this.bot.log(this.bot.isMobile, 'READ-TO-EARN', 'Completed Read to Earn')
+            this.bot.log(this.bot.isMobile, '阅读文章', '已完成“阅读文章”任务')
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            this.bot.log(this.bot.isMobile, 'READ-TO-EARN', `An error occurred: ${errorMessage}`, 'error')
+            this.bot.log(this.bot.isMobile, '阅读文章', `发生错误: ${errorMessage}`, 'error')
         }
     }
 }
