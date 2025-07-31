@@ -9,8 +9,7 @@ services:
       - ./src/accounts.json:/usr/src/microsoft-rewards-script/dist/accounts.json:ro
       - ./src/config.json:/usr/src/microsoft-rewards-script/dist/config.json:ro
       - ./sessions:/usr/src/microsoft-rewards-script/dist/browser/sessions # Optional, saves your login session
-      - ./src/search_terms.txt:/usr/src/microsoft-rewards-script/dist/search_terms.txt:ro
-
+      
     environment:
       TZ: "Asia/Shanghai" # Set your timezone for proper scheduling
       NODE_ENV: "production"
