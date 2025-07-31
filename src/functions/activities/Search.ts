@@ -67,10 +67,11 @@ export class Search extends Workers {
             await page.goto(this.bingHome, { waitUntil: 'domcontentloaded', timeout: 60000 });
             await this.bot.browser.utils.tryDismissAllMessages(page);
 
-            // [优化] 使用 getByPlaceholder 定位搜索框，更稳定
-            const searchBar = page.getByPlaceholder(/搜索|Search/i);
-            await searchBar.fill(query, { timeout: 15000 });
-            await searchBar.press('Enter');
+            // [核心修复] 将搜索框的定位方式从 getByPlaceholder 回滚为更稳定的ID选择器
+            const searchBarSelector = '#sb_form_q';
+            await page.waitForSelector(searchBarSelector, { state: 'visible', timeout: 15000 });
+            await page.fill(searchBarSelector, query);
+            await page.press(searchBarSelector, 'Enter');
 
             const navigationTimeoutMs = this.bot.utils.stringToMs(this.bot.config.navigationTimeout);
             await page.waitForSelector('#b_results', { timeout: navigationTimeoutMs });
@@ -134,12 +135,10 @@ export class Search extends Workers {
 
     private async clickRandomLink(page: Page) {
         try {
-            // [优化] 使用更通用的方法寻找并点击链接
             const resultsContainer = page.locator('#b_results');
             const links = resultsContainer.getByRole('link');
             const count = await links.count();
             if (count > 0) {
-                // 从前5个结果中随机点一个，更像真人行为
                 const clickMaxIndex = Math.min(count, 5);
                 const randomIndex = Math.floor(Math.random() * clickMaxIndex);
                 await links.nth(randomIndex).click({ timeout: 5000 }).catch(() => {});
