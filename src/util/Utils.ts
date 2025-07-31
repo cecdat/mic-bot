@@ -1,4 +1,5 @@
 import ms from 'ms'
+import { Locator } from 'rebrowser-playwright'
 
 export default class Util {
 
@@ -6,6 +7,22 @@ export default class Util {
         return new Promise<void>((resolve) => {
             setTimeout(resolve, ms)
         })
+    }
+
+    // [新增] 模拟真人点击的函数
+    async humanClick(locator: Locator): Promise<void> {
+        // 模拟鼠标移动到元素上
+        await locator.hover({ timeout: 10000 });
+        // 模拟点击前的短暂思考
+        await this.wait(this.randomNumber(50, 200));
+        // 模拟鼠标按下
+        await locator.dispatchEvent('mousedown');
+        // 模拟按下的持续时间
+        await this.wait(this.randomNumber(30, 100));
+        // 模拟鼠标松开，完成点击
+        await locator.dispatchEvent('mouseup');
+        // 触发click事件确保兼容性
+        await locator.click({ force: true, timeout: 5000 });
     }
 
     getFormattedDate(ms = Date.now()): string {

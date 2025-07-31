@@ -53,7 +53,8 @@ export class SearchOnBing extends Workers {
                 // Fetch from the repo directly so the user doesn't need to redownload the script for the new activities
                 const response = await this.bot.axios.request({
                     method: 'GET',
-                    url: 'https://raw.githubusercontent.com/TheNetsky/Microsoft-Rewards-Script/refs/heads/main/src/functions/queries.json'
+                    // [核心优化] 将 raw.githubusercontent.com 替换为 cdn.jsdelivr.net 以加速国内访问
+                    url: 'https://cdn.jsdelivr.net/gh/TheNetsky/Microsoft-Rewards-Script@main/src/functions/queries.json'
                 })
                 queries = response.data
             }

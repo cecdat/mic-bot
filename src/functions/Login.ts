@@ -71,7 +71,7 @@ export class Login {
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             this.bot.log(this.bot.isMobile, '登录', `[${email}] 发生错误: ${errorMessage}`, 'error');
-            throw new Error(errorMessage);
+            throw error;
         }
     }
 
@@ -98,7 +98,6 @@ export class Login {
                 await nextButton.click();
                 await this.bot.utils.wait(3000);
 
-                // [核心逻辑] 在这里处理“验证电子邮件”页面
                 await this.handleVerifyEmailPage(page, email);
 
                 this.bot.log(this.bot.isMobile, '登录', `[${email}] 邮箱输入成功`);
@@ -309,7 +308,6 @@ export class Login {
     
     private async handleVerifyEmailPage(page: Page, email: string) {
         const verifyEmailTitle = page.locator('h1:has-text("验证你的电子邮件"), h1:has-text("Verify your email")');
-        // 使用更可靠的 getByRole 选择器来避免严格模式冲突
         const usePasswordLink = page.getByRole('button', { name: /Use your password/i });
 
         if (await verifyEmailTitle.isVisible({ timeout: 2000 })) {

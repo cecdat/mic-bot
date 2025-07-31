@@ -1,5 +1,4 @@
 import { Page } from 'rebrowser-playwright'
-// [最终修正] 移除了未使用的 'platform'
 import fs from 'fs' 
 import path from 'path' 
 
@@ -26,7 +25,6 @@ export class Search extends Workers {
         let searchQueries: string[];
 
         if (uniqueQueries.length > 0) {
-            // [优化] 根据剩余积分动态计算需要抽取的搜索词数量
             const requiredSearches = Math.ceil(missingPoints / 3) + 2;
             this.bot.log(this.bot.isMobile, '搜索-本地词库', `剩余 ${missingPoints} 积分，将从 ${uniqueQueries.length} 个词中随机抽取 ${requiredSearches} 个进行搜索。`);
             const shuffledQueries = this.bot.utils.shuffleArray(uniqueQueries);
@@ -69,9 +67,10 @@ export class Search extends Workers {
             await page.goto(this.bingHome, { waitUntil: 'domcontentloaded', timeout: 60000 });
             await this.bot.browser.utils.tryDismissAllMessages(page);
 
-            const searchBar = '#sb_form_q';
-            await page.fill(searchBar, query, { timeout: 15000 });
-            await page.press(searchBar, 'Enter');
+            // [优化] 使用 getByPlaceholder 定位搜索框，更稳定
+            const searchBar = page.getByPlaceholder(/搜索|Search/i);
+            await searchBar.fill(query, { timeout: 15000 });
+            await searchBar.press('Enter');
 
             const navigationTimeoutMs = this.bot.utils.stringToMs(this.bot.config.navigationTimeout);
             await page.waitForSelector('#b_results', { timeout: navigationTimeoutMs });
@@ -135,7 +134,16 @@ export class Search extends Workers {
 
     private async clickRandomLink(page: Page) {
         try {
-            await page.click('#b_results .b_algo h2', { timeout: 2000 }).catch(() => { })
+            // [优化] 使用更通用的方法寻找并点击链接
+            const resultsContainer = page.locator('#b_results');
+            const links = resultsContainer.getByRole('link');
+            const count = await links.count();
+            if (count > 0) {
+                // 从前5个结果中随机点一个，更像真人行为
+                const clickMaxIndex = Math.min(count, 5);
+                const randomIndex = Math.floor(Math.random() * clickMaxIndex);
+                await links.nth(randomIndex).click({ timeout: 5000 }).catch(() => {});
+            }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             this.bot.log(this.bot.isMobile, '搜索-随机点击', `发生错误: ${errorMessage}`, 'error')
