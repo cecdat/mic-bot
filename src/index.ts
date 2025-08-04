@@ -1,21 +1,47 @@
 import cluster from 'cluster'
-import { Page } from 'rebrowser-playwright'
-
+import { Page, Browser as PlaywrightBrowser } from 'rebrowser-playwright'
 import Browser from './browser/Browser'
 import BrowserFunc from './browser/BrowserFunc'
 import BrowserUtil from './browser/BrowserUtil'
-
 import { log } from './util/Logger'
 import Util from './util/Utils'
 import { loadAccounts, loadConfig, loadDailyPoints, saveDailyPoints } from './util/Load'
 import { sendPush } from './util/Push'
-
+import { accountStatusManager } from './util/AccountStatusManager'
+import { aiOrchestrator } from './util/AIOrcestrator'
 import { Login } from './functions/Login'
 import { Workers } from './functions/Workers'
 import Activities from './functions/Activities'
-
 import { Account } from './interface/Account'
 import Axios from './util/Axios'
+
+async function sendPointsUpdate(bot: MicrosoftRewardsBot, data: { email: string, total_points: number, daily_gain: number }) {
+    const apiConfig = bot.config.apiServer;
+    if (!apiConfig || !apiConfig.enabled || !apiConfig.url || !apiConfig.token) {
+        return; 
+    }
+    
+    const payload = {
+        ...data,
+        node_name: apiConfig.nodeName || '默认节点'
+    };
+
+    try {
+        log('main', '数据上报', `正在向中心API上报账户 ${data.email} (节点: ${payload.node_name}) 的积分数据...`);
+        await bot.axios.request({
+            url: apiConfig.url,
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiConfig.token}`
+            },
+            data: payload
+        }, true);
+        log('main', '数据上报', `账户 ${data.email} 的数据上报成功！`);
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        log('main', '数据上报', `向中心API上报数据失败: ${errorMessage}`, 'error');
+    }
+}
 
 export class MicrosoftRewardsBot {
     public log: typeof log
@@ -28,12 +54,10 @@ export class MicrosoftRewardsBot {
     }
     public isMobile: boolean = false;
     public homePage!: Page
-
     private browserFactory: Browser = new Browser(this)
     private workers: Workers
     private login = new Login(this)
     private accessToken: string = ''
-
     public axios!: Axios
 
     constructor() {
@@ -47,151 +71,178 @@ export class MicrosoftRewardsBot {
         this.config = loadConfig()
     }
     
-    private async Desktop(account: Account): Promise<number> {
+    private async Desktop(browser: PlaywrightBrowser, account: Account): Promise<number> {
         this.isMobile = false;
-        const browser = await this.browserFactory.createBrowser(account)
-        const page = await browser.newPage()
-        log(this.isMobile, '主流程', `[${account.email}] 启动桌面端浏览器`)
-
-        await this.login.login(page, account.email, account.password)
+        const context = await this.browserFactory.createContext(browser, account);
+        const page = await context.newPage();
         
-        const data = await this.browser.func.getDashboardData(page);
-        
-        // [核心修改] 每日积分记录逻辑
-        const todayStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-        const dailyPointsData = await loadDailyPoints(this.config.sessionPath, account.email);
-        let initialPointsToday: number;
+        try {
+            log(this.isMobile, '主流程', `[${account.email}] 已创建桌面端上下文`);
+            await this.login.login(page, account.email, account.password);
+            
+            const data = await this.browser.func.getDashboardData(page);
+            
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const dailyPointsData = await loadDailyPoints(this.config.sessionPath, account.email);
+            let initialPointsToday: number;
 
-        if (dailyPointsData && dailyPointsData.date === todayStr) {
-            // 如果是今天，直接使用记录的初始积分
-            initialPointsToday = dailyPointsData.initialPoints;
-            log(this.isMobile, '积分统计', `[${account.email}] 读取到今日初始积分: ${initialPointsToday}`);
-        } else {
-            // 如果是新的一天或没有记录，记录新的初始积分
-            initialPointsToday = data.userStatus.availablePoints;
-            await saveDailyPoints(this.config.sessionPath, account.email, { date: todayStr, initialPoints: initialPointsToday });
-            log(this.isMobile, '积分统计', `[${account.email}] 记录今日新的初始积分: ${initialPointsToday}`);
+            if (dailyPointsData && dailyPointsData.date === todayStr) {
+                initialPointsToday = dailyPointsData.initialPoints;
+                log(this.isMobile, '积分统计', `[${account.email}] 读取到今日初始积分: ${initialPointsToday}`);
+            } else {
+                initialPointsToday = data.userStatus.availablePoints;
+                await saveDailyPoints(this.config.sessionPath, account.email, { date: todayStr, initialPoints: initialPointsToday });
+                log(this.isMobile, '积分统计', `[${account.email}] 记录今日新的初始积分: ${initialPointsToday}`);
+            }
+            
+            const allTasks = aiOrchestrator.getAllIncompleteTasks(data);
+            if (allTasks.length > 0) {
+                const executionPlan = await aiOrchestrator.getTaskExecutionPlan(allTasks);
+
+                log(this.isMobile, '主流程', `[${account.email}] AI任务计划已生成，开始执行...`);
+                for (const task of executionPlan) {
+                    await this.workers.executeSingleTask(page, task);
+                }
+                log(this.isMobile, '主流程', `[${account.email}] AI任务计划执行完毕。`);
+            } else {
+                log(this.isMobile, '主流程', `[${account.email}] 没有可由AI调度的日常任务。`);
+            }
+
+            if (this.config.workers.doPunchCards) await this.workers.doPunchCard(page, data);
+            
+            const freshData = await this.browser.func.getDashboardData(page);
+            // [修改] 调用搜索时，传入 account.email
+            if (this.config.workers.doDesktopSearch) await this.activities.doSearch(page, freshData, account.email);
+            
+            return initialPointsToday;
+        } finally {
+            await context.close();
+            log(this.isMobile, '主流程', `[${account.email}] 已关闭桌面端上下文`);
         }
-        
-        const browserEnarablePoints = this.browser.func.getBrowserEarnablePoints(data);
-        const pointsCanCollect = browserEnarablePoints.dailySetPoints + browserEnarablePoints.desktopSearchPoints + browserEnarablePoints.morePromotionsPoints
-        log(this.isMobile, '积分统计', `[${account.email}] 桌面端可赚取 ${pointsCanCollect} 积分`)
-
-        if (!this.config.runOnZeroPoints && pointsCanCollect === 0) {
-            log(this.isMobile, '主流程', `[${account.email}] 桌面端无积分可赚取，跳过任务。`, 'log', 'yellow')
-        } else {
-            const workerPage = await browser.newPage()
-            await this.browser.func.goHome(workerPage)
-            if (this.config.workers.doDailySet) await this.workers.doDailySet(workerPage, data)
-            if (this.config.workers.doMorePromotions) await this.workers.doMorePromotions(workerPage, data)
-            if (this.config.workers.doPunchCards) await this.workers.doPunchCard(workerPage, data)
-            if (this.config.workers.doDesktopSearch) await this.activities.doSearch(workerPage, data)
-        }
-        
-        await this.browser.func.closeBrowser(browser, account.email)
-        return initialPointsToday; // 返回今天的初始积分
     }
 
-    private async Mobile(account: Account, initialPointsToday: number) {
+    private async Mobile(browser: PlaywrightBrowser, account: Account, initialPointsToday: number) {
         this.isMobile = true;
-        const browser = await this.browserFactory.createBrowser(account)
-        const page = await browser.newPage()
-        log(this.isMobile, '主流程', `[${account.email}] 启动移动端浏览器`)
+        const context = await this.browserFactory.createContext(browser, account);
+        const page = await context.newPage();
 
-        await this.login.login(page, account.email, account.password)
-
-        log(this.isMobile, '主流程', `[${account.email}] 正在打开临时页面以安全获取AccessToken...`);
-        const tokenPage = await browser.newPage();
         try {
-            this.accessToken = await this.login.getMobileAccessToken(tokenPage, account.email);
-        } finally {
-            await tokenPage.close();
-            log(this.isMobile, '主流程', `[${account.email}] 临时页面已关闭，返回主流程。`);
-        }
-        
-        const data = await this.browser.func.getDashboardData(page);
+            log(this.isMobile, '主流程', `[${account.email}] 已创建移动端上下文`);
+            await this.login.login(page, account.email, account.password);
 
-        const browserEnarablePoints = this.browser.func.getBrowserEarnablePoints(data);
-        const appEarnablePoints = await this.browser.func.getAppEarnablePoints(data, this.accessToken);
-        const pointsCanCollect = browserEnarablePoints.mobileSearchPoints + appEarnablePoints.totalEarnablePoints
-        log(this.isMobile, '积分统计', `[${account.email}] 移动端可赚取 ${pointsCanCollect} 积分 (浏览器: ${browserEnarablePoints.mobileSearchPoints}, App: ${appEarnablePoints.totalEarnablePoints})`)
+            log(this.isMobile, '主流程', `[${account.email}] 正在打开临时页面以安全获取AccessToken...`);
+            const tokenPage = await context.newPage();
+            try {
+                this.accessToken = await this.login.getMobileAccessToken(tokenPage, account.email);
+            } finally {
+                await tokenPage.close();
+                log(this.isMobile, '主流程', `[${account.email}] 临时页面已关闭，返回主流程。`);
+            }
+            
+            const data = await this.browser.func.getDashboardData(page);
 
-        if (!this.config.runOnZeroPoints && pointsCanCollect === 0) {
-            log(this.isMobile, '主流程', `[${account.email}] 移动端无积分可赚取，跳过任务。`, 'log', 'yellow')
-        } else {
-            if (this.config.workers.doDailyCheckIn) await this.activities.doDailyCheckIn(this.accessToken, data)
-            if (this.config.workers.doReadToEarn) await this.activities.doReadToEarn(this.accessToken, data)
-            if (this.config.workers.doMobileSearch) {
-                if (data.userStatus.counters.mobileSearch) {
-                    const workerPage = await browser.newPage()
-                    await this.browser.func.goHome(workerPage)
-                    await this.activities.doSearch(workerPage, data)
-                } else {
-                    log(this.isMobile, '主流程', `[${account.email}] 无法获取移动端搜索积分，您的账户可能太“新”了！`, 'warn')
+            const browserEnarablePoints = this.browser.func.getBrowserEarnablePoints(data);
+            const appEarnablePoints = await this.browser.func.getAppEarnablePoints(data, this.accessToken);
+            const pointsCanCollect = browserEnarablePoints.mobileSearchPoints + appEarnablePoints.totalEarnablePoints;
+            log(this.isMobile, '积分统计', `[${account.email}] 移动端可赚取 ${pointsCanCollect} 积分 (浏览器: ${browserEnarablePoints.mobileSearchPoints}, App: ${appEarnablePoints.totalEarnablePoints})`);
+
+            if (!this.config.runOnZeroPoints && pointsCanCollect === 0) {
+                log(this.isMobile, '主流程', `[${account.email}] 移动端无积分可赚取，跳过任务。`, 'log', 'yellow');
+            } else {
+                if (this.config.workers.doDailyCheckIn) await this.activities.doDailyCheckIn(this.accessToken, data);
+                if (this.config.workers.doReadToEarn) await this.activities.doReadToEarn(this.accessToken, data);
+                if (this.config.workers.doMobileSearch) {
+                    if (data.userStatus.counters.mobileSearch) {
+                        const workerPage = await context.newPage();
+                        await this.browser.func.goHome(workerPage);
+                        // [修改] 调用搜索时，传入 account.email
+                        await this.activities.doSearch(workerPage, data, account.email);
+                    } else {
+                        log(this.isMobile, '主流程', `[${account.email}] 无法获取移动端搜索积分，您的账户可能太“新”了！`, 'warn');
+                    }
                 }
             }
-        }
-        
-        const finalData = await this.browser.func.getDashboardData(page);
-        const finalPoints = finalData.userStatus.availablePoints;
-        
-        // [核心修改] 使用今天的初始积分进行计算
-        const totalPointsCollected = finalPoints - initialPointsToday;
-        const summaryMessage = `账户 ${account.email} 今日共获得 ${totalPointsCollected} 积分 (初始: ${initialPointsToday}, 最终: ${finalPoints})。`;
-        
-        log(this.isMobile, '积分统计', summaryMessage, 'log', 'green');
-        await sendPush('每日积分统计', summaryMessage);
+            
+            const finalData = await this.browser.func.getDashboardData(page);
+            const finalPoints = finalData.userStatus.availablePoints;
+            const totalPointsCollected = finalPoints - initialPointsToday;
+            const summaryMessage = `账户 ${account.email} 今日共获得 ${totalPointsCollected} 积分 (初始: ${initialPointsToday}, 最终: ${finalPoints})。`;
+            
+            log(this.isMobile, '积分统计', summaryMessage, 'log', 'green');
+            await sendPush('每日积分统计', summaryMessage);
 
-        await this.browser.func.closeBrowser(browser, account.email)
+            await sendPointsUpdate(this, {
+                email: account.email,
+                total_points: finalPoints,
+                daily_gain: totalPointsCollected
+            });
+
+        } finally {
+            await context.close();
+            log(this.isMobile, '主流程', `[${account.email}] 已关闭移动端上下文`);
+        }
     }
 
     public async runFor(account: Account) {
         this.axios = new Axios(account.proxy);
-        let initialPointsToday = 0;
-
-        try {
-            initialPointsToday = await this.Desktop(account);
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            log(false, '主流程-错误', `[${account.email}] 桌面端任务执行失败: ${errorMessage}`, 'error');
-            try {
-                // [核心修改] 即使桌面端失败，也要确保能正确获取或记录当日初始积分
-                this.isMobile = false;
-                const browser = await this.browserFactory.createBrowser(account);
-                const page = await browser.newPage();
-                await this.login.login(page, account.email, account.password);
-                
-                const todayStr = new Date().toISOString().slice(0, 10);
-                const dailyPointsData = await loadDailyPoints(this.config.sessionPath, account.email);
-                if (dailyPointsData && dailyPointsData.date === todayStr) {
-                    initialPointsToday = dailyPointsData.initialPoints;
-                } else {
-                    const data = await this.browser.func.getDashboardData(page);
-                    initialPointsToday = data.userStatus.availablePoints;
-                    await saveDailyPoints(this.config.sessionPath, account.email, { date: todayStr, initialPoints: initialPointsToday });
-                }
-                
-                await this.browser.func.closeBrowser(browser, account.email);
-                log(false, '主流程-恢复', `[${account.email}] 已重新获取今日初始积分: ${initialPointsToday}，准备执行移动端任务。`);
-            } catch (recoveryError) {
-                const recoveryErrorMessage = recoveryError instanceof Error ? recoveryError.message : String(recoveryError);
-                log(false, '主流程-错误', `[${account.email}] 尝试恢复并获取初始积分失败: ${recoveryErrorMessage}，移动端任务将从0积分开始计算。`, 'error');
-            }
-        }
+        const browser = await this.browserFactory.launchBrowser(account);
         
-        await this.Mobile(account, initialPointsToday);
+        try {
+            let initialPointsToday = 0;
+            try {
+                initialPointsToday = await this.Desktop(browser, account);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                log(false, '主流程-错误', `[${account.email}] 桌面端任务执行失败: ${errorMessage}`, 'error');
+                
+                this.isMobile = false; 
+                const recoveryContext = await this.browserFactory.createContext(browser, account);
+                const recoveryPage = await recoveryContext.newPage();
+                try {
+                    await this.login.login(recoveryPage, account.email, account.password);
+                    
+                    const todayStr = new Date().toISOString().slice(0, 10);
+                    const dailyPointsData = await loadDailyPoints(this.config.sessionPath, account.email);
+                    if (dailyPointsData && dailyPointsData.date === todayStr) {
+                        initialPointsToday = dailyPointsData.initialPoints;
+                    } else {
+                        const data = await this.browser.func.getDashboardData(recoveryPage);
+                        initialPointsToday = data.userStatus.availablePoints;
+                        await saveDailyPoints(this.config.sessionPath, account.email, { date: todayStr, initialPoints: initialPointsToday });
+                    }
+                    log(false, '主流程-恢复', `[${account.email}] 已重新获取今日初始积分: ${initialPointsToday}，准备执行移动端任务。`);
+                } catch (recoveryError) {
+                    const recoveryErrorMessage = recoveryError instanceof Error ? recoveryError.message : String(recoveryError);
+                    log(false, '主流程-错误', `[${account.email}] 尝试恢复并获取初始积分失败: ${recoveryErrorMessage}，移动端任务将从0积分开始计算。`, 'error');
+                } finally {
+                    await recoveryContext.close();
+                }
+            }
+            
+            await this.Mobile(browser, account, initialPointsToday);
+
+        } finally {
+            await browser.close();
+            log('main', '浏览器', `[${account.email}] 浏览器主进程已关闭`);
+        }
     }
 }
 
 async function runTasksForAccounts(accounts: Account[]) {
     for (const account of accounts) {
+        if (accountStatusManager.isFrozen(account.email)) {
+            continue; 
+        }
+
         log('main', '主进程-WORKER', `开始为账户 ${account.email} 执行任务`);
         try {
             const bot = new MicrosoftRewardsBot();
             await bot.runFor(account);
+            accountStatusManager.recordSuccess(account.email);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             log('main', '主进程-WORKER', `账户 ${account.email} 的任务执行失败: ${errorMessage}`, 'error');
+            accountStatusManager.recordFailure(account.email);
         }
         log('main', '主进程-WORKER', `完成账户 ${account.email} 的所有任务流程。`, 'log', 'green');
     }

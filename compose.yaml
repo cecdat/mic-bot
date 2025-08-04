@@ -1,7 +1,7 @@
 services:
   netsky:
     build: .
-    container_name: microsoft-rewards-script
+    container_name: mic-bot
     restart: unless-stopped
 
     # Volume mounts: Specify a location where you want to save the files on your local machine.
@@ -9,16 +9,16 @@ services:
       - ./src/accounts.json:/usr/src/microsoft-rewards-script/dist/accounts.json:ro
       - ./src/config.json:/usr/src/microsoft-rewards-script/dist/config.json:ro
       - ./sessions:/usr/src/microsoft-rewards-script/dist/browser/sessions # Optional, saves your login session
-      
+
     environment:
       TZ: "Asia/Shanghai" # Set your timezone for proper scheduling
       NODE_ENV: "production"
-      CRON_SCHEDULE: "0 8,13,20 * * *" # Customize your schedule, use crontab.guru for formatting
+      CRON_SCHEDULE: "10 9,11,15 * * *" # Customize your schedule, use crontab.guru for formatting
       RUN_ON_START: "true" # Runs the script on container startup
 
       # Start-time randomization (uncomment to customize or disable)
-      #MIN_SLEEP_MINUTES: "5"
-      #MAX_SLEEP_MINUTES: "50"
+      MIN_SLEEP_MINUTES: "10"
+      MAX_SLEEP_MINUTES: "20"
       SKIP_RANDOM_SLEEP: "false"
 
     # Optional resource limits for the container

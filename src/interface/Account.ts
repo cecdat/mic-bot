@@ -6,6 +6,7 @@ export interface Account {
         desktop?: string; // <--- 桌面端UA
         mobile?: string;  // <--- 移动端UA
     };
+    hotSearchEndpoints?: string[];
 }
 
 export interface AccountProxy {

@@ -1,3 +1,15 @@
+export interface ConfigApiServer {
+    enabled: boolean;
+    url: string;
+    token: string;
+    nodeName?: string;
+}
+
+export interface ConfigHotSearchApi {
+    enabled: boolean;
+    baseUrl: string;
+}
+
 export interface Config {
     baseURL: string;
     sessionPath: string;
@@ -17,6 +29,8 @@ export interface Config {
     proxy: ConfigProxy;
     webhook: ConfigWebhook;
     ntfy: ConfigNtfy;
+    apiServer: ConfigApiServer;
+    hotSearchApi: ConfigHotSearchApi;
 }
 
 export interface ConfigSaveFingerprint {
@@ -46,7 +60,7 @@ export interface ConfigNtfy {
     enabled: boolean;
     url: string;
     topic: string;
-    authToken?: string; // Optional authentication token
+    authToken?: string;
 }
 
 export interface ConfigProxy {

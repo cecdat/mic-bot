@@ -12,6 +12,7 @@ import { SearchOnBing } from './activities/SearchOnBing'
 import { ReadToEarn } from './activities/ReadToEarn'
 import { DailyCheckIn } from './activities/DailyCheckIn'
 
+// [核心修复] 修正了 ../../ 为 ../
 import { DashboardData, MorePromotion, PromotionalItem } from '../interface/DashboardData'
 
 
@@ -22,9 +23,9 @@ export default class Activities {
         this.bot = bot
     }
 
-    doSearch = async (page: Page, data: DashboardData): Promise<void> => {
+    doSearch = async (page: Page, data: DashboardData, email: string): Promise<void> => {
         const search = new Search(this.bot)
-        await search.doSearch(page, data)
+        await search.doSearch(page, data, email)
     }
 
     doABC = async (page: Page): Promise<void> => {

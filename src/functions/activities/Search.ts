@@ -3,13 +3,13 @@ import fs from 'fs'
 import path from 'path' 
 
 import { Workers } from '../Workers'
-
 import { Counters, DashboardData } from '../../interface/DashboardData'
 
 export class Search extends Workers {
     private bingHome = 'https://bing.com'
 
-    public async doSearch(page: Page, data: DashboardData) {
+    // [修改] doSearch 方法现在需要接收 email
+    public async doSearch(page: Page, data: DashboardData, email: string) {
         this.bot.log(this.bot.isMobile, '搜索-必应', '开始必应搜索')
 
         let searchCounters: Counters = data.userStatus.counters;
@@ -20,7 +20,8 @@ export class Search extends Workers {
             return
         }
 
-        let allQueries = await this.getLocalSearchWords();
+        // [核心修改] 传入email，让脚本能找到专属的搜索词文件
+        let allQueries = await this.getLocalSearchWords(email);
         const uniqueQueries = [...new Set(allQueries)];
         let searchQueries: string[];
 
@@ -67,7 +68,6 @@ export class Search extends Workers {
             await page.goto(this.bingHome, { waitUntil: 'domcontentloaded', timeout: 60000 });
             await this.bot.browser.utils.tryDismissAllMessages(page);
 
-            // [核心修复] 将搜索框的定位方式从 getByPlaceholder 回滚为更稳定的ID选择器
             const searchBarSelector = '#sb_form_q';
             await page.waitForSelector(searchBarSelector, { state: 'visible', timeout: 15000 });
             await page.fill(searchBarSelector, query);
@@ -102,19 +102,35 @@ export class Search extends Workers {
         return latestData.userStatus.counters;
     }
 
-    private async getLocalSearchWords(): Promise<string[]> {
-        const filePath = path.join(__dirname, '..', '..', 'search_terms.txt');
+    // [核心修改] getLocalSearchWords 现在能智能加载专属或默认的词库
+    private async getLocalSearchWords(email: string): Promise<string[]> {
+        // Python脚本现在会把所有搜索词文件输出到 dist/search_terms/ 目录下
+        const baseDir = path.join(__dirname, '..', '..', 'search_terms');
+        const userFilePath = path.join(baseDir, `${email}.txt`);
+        const defaultFilePath = path.join(baseDir, 'default.txt');
+        
+        let filePathToUse: string;
+
+        if (fs.existsSync(userFilePath)) {
+            // 如果存在专属文件，就用它
+            this.bot.log(this.bot.isMobile, '搜索-本地词库', `发现账户 ${email} 的专属搜索词文件，正在加载...`);
+            filePathToUse = userFilePath;
+        } else {
+            // 否则，使用通用文件
+            this.bot.log(this.bot.isMobile, '搜索-本地词库', `未找到账户 ${email} 的专属搜索词文件，将使用通用热搜词。`);
+            filePathToUse = defaultFilePath;
+        }
+
         try {
-            if (!fs.existsSync(filePath)) {
-                this.bot.log(this.bot.isMobile, '搜索-本地词库', 'search_terms.txt 文件不存在', 'warn');
+            if (!fs.existsSync(filePathToUse)) {
+                this.bot.log(this.bot.isMobile, '搜索-本地词库', `搜索词文件 ${path.basename(filePathToUse)} 不存在`, 'warn');
                 return [];
             }
-            const fileContent = fs.readFileSync(filePath, 'utf-8');
-            const terms = fileContent.split('\n').map(term => term.trim()).filter(term => term.length > 0);
-            return terms;
+            const fileContent = fs.readFileSync(filePathToUse, 'utf-8');
+            return fileContent.split('\n').map(term => term.trim()).filter(term => term.length > 0);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            this.bot.log(this.bot.isMobile, '搜索-本地词库', `读取本地搜索词文件时发生错误: ${errorMessage}`, 'error');
+            this.bot.log(this.bot.isMobile, '搜索-本地词库', `读取搜索词文件时发生错误: ${errorMessage}`, 'error');
             return [];
         }
     }

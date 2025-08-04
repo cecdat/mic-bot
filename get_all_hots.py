@@ -1,86 +1,132 @@
 import requests
 from bs4 import BeautifulSoup
 import os
-from datetime import datetime
 import json
+from datetime import datetime
+import time
+
+# --- 全局变量与函数 ---
+CONFIG_FILE_PATH = '/usr/src/microsoft-rewards-script/dist/config.json'
+ACCOUNTS_FILE_PATH = '/usr/src/microsoft-rewards-script/dist/accounts.json'
+SEARCH_TERMS_DIR = '/usr/src/microsoft-rewards-script/dist/search_terms'
 
 def log_with_time(message):
-    """
-    一个简单的日志函数，可以在每条消息前添加时间戳。
-    """
+    """一个简单的日志函数，可以在每条消息前添加时间戳。"""
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     print(f"[{timestamp}] {message}")
 
-def fetch_weibo_hot():
-    """
-    从微博官方接口获取热搜数据。
-    """
-    log_with_time("正在从 微博官方接口 获取数据...")
-    url = "https://weibo.com/ajax/side/hotSearch"
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
-        'Accept': 'application/json, text/plain, */*'
-    }
+# --- API热搜获取模块 ---
+def fetch_from_api(base_url, endpoint):
+    if not base_url or not endpoint:
+        return None
+    
+    api_url = f"{base_url.rstrip('/')}/{endpoint}"
+    log_with_time(f"正在从自定义API [{api_url}] 获取热搜词...")
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(api_url, headers=headers, timeout=10)
         response.raise_for_status()
         data = response.json()
-        realtime_data = data.get('data', {}).get('realtime', [])
-        if not realtime_data:
-            log_with_time("未能从微博接口返回的数据中找到 'realtime' 列表。")
-            return []
-        titles = [item.get('word') for item in realtime_data if item.get('word')]
-        log_with_time(f"成功从 微博官方接口 获取 {len(titles)} 条热搜。")
-        return titles
+        
+        if data.get('code') == 200 and 'data' in data:
+            titles = [item.get('title') for item in data['data'] if item.get('title')]
+            log_with_time(f"成功从API [{endpoint}] 获取 {len(titles)} 条热搜。")
+            return titles
+        else:
+            log_with_time(f"API [{endpoint}] 返回的数据格式不正确: {data.get('message', '无错误信息')}")
+            return None
     except Exception as e:
-        log_with_time(f"处理 微博官方接口 数据时发生错误: {e}")
-        return []
+        log_with_time(f"从API [{endpoint}] 获取数据时发生错误: {e}")
+        return None
+
+# --- [核心修改] 传统热搜抓取模块 (只保留百度作为备用) ---
+def fetch_fallback_hots():
+    log_with_time("执行备用方案：抓取百度热搜...")
+    fallback_terms = []
+    fallback_terms.extend(fetch_baidu_hot())
+    return list(set(fallback_terms)) # 去重
+
+# [核心修改] 移除了 fetch_weibo_hot() 函数
 
 def fetch_baidu_hot():
-    """
-    抓取并解析百度实时热搜榜的HTML页面。
-    """
     log_with_time("正在从 百度实时热搜榜 获取数据...")
     url = "https://top.baidu.com/board?tab=realtime"
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'}
+    headers = {'User-Agent': 'Mozilla/5.0'}
     try:
         response = requests.get(url, headers=headers, timeout=15)
         response.raise_for_status()
         response.encoding = 'utf-8'
         soup = BeautifulSoup(response.text, 'html.parser')
-        hot_items = soup.find_all('div', class_='c-single-text-ellipsis')
-        titles = [item.get_text(strip=True) for item in hot_items]
+        items = soup.find_all('div', class_='c-single-text-ellipsis')
+        titles = [item.get_text(strip=True) for item in items]
         log_with_time(f"成功从 百度实时热搜榜 获取 {len(titles)} 条热搜。")
         return titles
     except Exception as e:
         log_with_time(f"处理 百度实时热搜榜 数据时发生错误: {e}")
         return []
 
-def main():
-    """
-    主函数，整合所有来源并写入文件。
-    """
-    OUTPUT_FILEPATH = '/usr/src/microsoft-rewards-script/dist/search_terms.txt'
-    
-    all_hot_terms = []
-    all_hot_terms.extend(fetch_weibo_hot())
-    all_hot_terms.extend(fetch_baidu_hot())
-    
-    if not all_hot_terms:
-        log_with_time("\n未能从任何来源获取到热搜词，程序退出。")
-        return
-
-    unique_terms = sorted(list(set(all_hot_terms)), key=all_hot_terms.index)
-
+# --- 主逻辑 ---
+def write_terms_to_file(filepath, terms):
     try:
-        os.makedirs(os.path.dirname(OUTPUT_FILEPATH), exist_ok=True)
-        with open(OUTPUT_FILEPATH, 'w', encoding='utf-8') as f:
-            for term in unique_terms:
+        with open(filepath, 'w', encoding='utf-8') as f:
+            for term in terms:
                 f.write(term + '\n')
-        
-        log_with_time(f"\n任务完成！总共 {len(unique_terms)} 条热搜词已覆盖写入到 {OUTPUT_FILEPATH}")
+        log_with_time(f"已将 {len(terms)} 条搜索词写入 {os.path.basename(filepath)}")
     except IOError as e:
-        log_with_time(f"\n写入文件时发生错误: {e}")
+        log_with_time(f"写入文件 {os.path.basename(filepath)} 时发生错误: {e}")
+
+def main():
+    os.makedirs(SEARCH_TERMS_DIR, exist_ok=True)
+    
+    try:
+        with open(CONFIG_FILE_PATH, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        with open(ACCOUNTS_FILE_PATH, 'r', encoding='utf-8') as f:
+            accounts = json.load(f)
+    except Exception as e:
+        log_with_time(f"读取配置文件失败: {e}")
+        return
+        
+    api_config = config.get('hotSearchApi', {})
+    api_enabled = api_config.get('enabled', False)
+    api_base_url = api_config.get('baseUrl')
+
+    fallback_terms = fetch_fallback_hots()
+    if fallback_terms:
+        write_terms_to_file(os.path.join(SEARCH_TERMS_DIR, 'default.txt'), fallback_terms)
+    else:
+        log_with_time("警告：备用热搜词也未能获取，搜索任务可能无词可用。")
+
+    for account in accounts:
+        email = account.get('email')
+        # [核心修改] 读取 hotSearchEndpoints 数组
+        endpoints = account.get('hotSearchEndpoints')
+        
+        if not email:
+            continue
+
+        user_file_path = os.path.join(SEARCH_TERMS_DIR, f"{email}.txt")
+        
+        if api_enabled and endpoints and isinstance(endpoints, list):
+            all_custom_terms = []
+            # [核心修改] 遍历所有端点，获取数据并合并
+            for endpoint in endpoints:
+                custom_terms = fetch_from_api(api_base_url, endpoint)
+                if custom_terms:
+                    all_custom_terms.extend(custom_terms)
+                time.sleep(1) # 增加延迟，避免请求过快
+            
+            if all_custom_terms:
+                unique_terms = list(set(all_custom_terms))
+                write_terms_to_file(user_file_path, unique_terms)
+            else:
+                log_with_time(f"账户 {email} 的所有API端点均获取失败，将使用通用热搜词作为备用。")
+                if fallback_terms:
+                    write_terms_to_file(user_file_path, fallback_terms)
+        else:
+            if os.path.exists(user_file_path):
+                os.remove(user_file_path)
 
 if __name__ == "__main__":
     main()
