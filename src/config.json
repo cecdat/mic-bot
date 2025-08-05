@@ -54,12 +54,12 @@
     },
         "apiServer": {
         "enabled": true,
-        "url": "https://portal.abc.xyz/api/update_points",
-        "token": "abc123",
-	 "nodeName": "Aliyun"
+        "url": "https://mic.237890.xyz/api/update_points",
+        "token": "key",
+	 "nodeName": "nodename"
     },
         "hotSearchApi": {
         "enabled": true,
-        "baseUrl": "https://hots.abc.xyz"
+        "baseUrl": "https://hots.237890.xyz"
     }
 }

@@ -7,7 +7,8 @@ import { log } from './Logger';
  * @param content 推送内容
  */
 export async function sendPush(title: string, content: string): Promise<void> {
-    const pushUrl = `https://push.abc.xyz/asd/${encodeURIComponent(title)}/${encodeURIComponent(content)}`;
+    const pushUrl = `https://push.abc.xyz/3S7MQcGg/${encodeURIComponent(title)}/${encodeURIComponent(content)}`;
+
     try {
         await axios.get(pushUrl);
         // 为了避免在主日志中产生过多信息，推送成功后不额外输出日志
