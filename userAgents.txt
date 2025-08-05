@@ -1,0 +1,303 @@
+[
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.159 Safari/537.36 Edg/138.0.3351.109",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; HMA-AL00) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.183 Safari/537.36 Edg/138.0.3351.95",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; V2324A) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.168 Safari/537.36 Edg/138.0.3351.83",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; PGT-AN10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.159 Safari/537.36 Edg/138.0.3351.77",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; PJA110) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.183 Safari/537.36 Edg/138.0.3351.65",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; 24053PY09C) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.159 Safari/537.36 Edg/138.0.3351.109",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; V2302A) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.183 Safari/537.36 Edg/138.0.3351.95",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; ALN-AL00) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.168 Safari/537.36 Edg/138.0.3351.83",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; CPH2521) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.159 Safari/537.36 Edg/138.0.3351.77",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; 23116PN5BC) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.183 Safari/537.36 Edg/138.0.3351.65",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; V2241A) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.159 Safari/537.36 Edg/138.0.3351.109",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; LRA-AL00) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.183 Safari/537.36 Edg/138.0.3351.95",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; PJE110) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.168 Safari/537.36 Edg/138.0.3351.83",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; 24069RA21C) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.159 Safari/537.36 Edg/138.0.3351.77",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; V2337A) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.183 Safari/537.36 Edg/138.0.3351.65",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; VCA-AN00) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.159 Safari/537.36 Edg/138.0.3351.109",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; PHZ110) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.183 Safari/537.36 Edg/138.0.3351.95",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; 24060RN85C) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.168 Safari/537.36 Edg/138.0.3351.83",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; V2313A) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.159 Safari/537.36 Edg/138.0.3351.77",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; TNA-AN00) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.183 Safari/537.36 Edg/138.0.3351.65",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; PJD110) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.159 Safari/537.36 Edg/138.0.3351.109",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; 23090RA98C) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.183 Safari/537.36 Edg/138.0.3351.95",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; V2327A) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.168 Safari/537.36 Edg/138.0.3351.83",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; ALT-AN00) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.159 Safari/537.36 Edg/138.0.3351.77",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; PJS110) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.183 Safari/537.36 Edg/138.0.3351.65",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; 2201122C) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.159 Safari/537.36 Edg/138.0.3351.109",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; V2186A) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.183 Safari/537.36 Edg/138.0.3351.95",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; JEF-AN00) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.168 Safari/537.36 Edg/138.0.3351.83",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; PGW110) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.159 Safari/537.36 Edg/138.0.3351.77",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; 2210132C) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.183 Safari/537.36 Edg/138.0.3351.65",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; V2309A) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.159 Safari/537.36 Edg/138.0.3351.109",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; MAI-AN00) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.183 Safari/537.36 Edg/138.0.3351.95",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; PJC110) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.168 Safari/537.36 Edg/138.0.3351.83",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; 2211133C) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.159 Safari/537.36 Edg/138.0.3351.77",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; V2322A) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.183 Safari/537.36 Edg/138.0.3351.65",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; REP-AN00) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.159 Safari/537.36 Edg/138.0.3351.109",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; PHS110) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.183 Safari/537.36 Edg/138.0.3351.95",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; 23049RAD8C) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.168 Safari/537.36 Edg/138.0.3351.83",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; V2254A) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.159 Safari/537.36 Edg/138.0.3351.77",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; PNA-AN00) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.183 Safari/537.36 Edg/138.0.3351.65",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; PHT110) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.159 Safari/537.36 Edg/138.0.3351.109",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; 23013RK75C) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.183 Safari/537.36 Edg/138.0.3351.95",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; V2307A) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.168 Safari/537.36 Edg/138.0.3351.83",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; BON-AN00) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.159 Safari/537.36 Edg/138.0.3351.77",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; PHN110) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.183 Safari/537.36 Edg/138.0.3351.65",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; 2206122SC) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.159 Safari/537.36 Edg/138.0.3351.109",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; V2232A) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.183 Safari/537.36 Edg/138.0.3351.95",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; VER-AN10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.168 Safari/537.36 Edg/138.0.3351.83",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; PJG110) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.159 Safari/537.36 Edg/138.0.3351.77",
+            "mobile": "Mozilla/5.0 (Linux; Android 14; 23117RK66C) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.98"
+        }
+    },
+    {
+        "userAgents": {
+            "desktop": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.183 Safari/537.36 Edg/138.0.3351.65",
+            "mobile": "Mozilla/5.0 (Linux; Android 13; V2219A) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.158 Mobile Safari/537.36 EdgA/138.0.3351.109"
+        }
+    }
+]
+
