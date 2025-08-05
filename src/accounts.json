@@ -1,8 +1,8 @@
 [
      {
-        "email": "user@outlook.com",
-        "password": "password",
-        "hotSearchEndpoints": ["code1", "code2"],
+        "email": "User@outlook.com",
+        "password": "Password",
+        "hotSearchEndpoints": ["douyin", "tieba"],
     	"proxy": {
             "proxyAxios": true,
             "url": "",
@@ -16,9 +16,9 @@
         }
     },
        {
-        "email": "v@hotmail.com",
-        "password": "password",
-	"hotSearchEndpoints": ["code1", "code2"],
+        "email": "User@hotmail.com",
+        "password": "Greatwall@123",
+	"hotSearchEndpoints": ["toutiao", "sina-news"],
         "proxy": {
             "proxyAxios": true,
             "url": "",
@@ -33,9 +33,9 @@
     }
 ,
        {
-        "email": "user@outlook.com",
-        "password": "password",
-	"hotSearchEndpoints": ["code1", "code2"],
+        "email": "User@outlook.com",
+        "password": "Greatwall@123",
+	"hotSearchEndpoints": ["smzdm", "miyoushe"],
         "proxy": {
             "proxyAxios": true,
             "url": "",

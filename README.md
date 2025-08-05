@@ -1,78 +1,139 @@
-# Microsoft Rewards 智能自动化脚本
+# Microsoft-Rewards-Script
+Automated Microsoft Rewards script, however this time using TypeScript, Cheerio and Playwright.
 
-> **致谢声明**: 本项目是在 [mgrimace/Microsoft-Rewards-Script](https://github.com/mgrimace/Microsoft-Rewards-Script) 的基础上进行的深度二次开发和功能增强。我们对原开发者的杰出工作表示衷心的感谢和敬意。
+Under development, however mainly for personal use!
 
-一个经过深度优化的、基于 TypeScript、Playwright 和 Cheerio 的 Microsoft Rewards 自动化脚本。它不仅能完成日常任务，更集成了动态策略、智能容错和高度拟人化交互等高级功能，旨在提供一个稳定、高效且安全的自动化解决方案。
+## How to setup ##
+1. Download or clone source code
+2. Run `npm i` to install the packages
+3. Change `accounts.example.json` to `accounts.json` and add your account details
+4. Change `config.json` to your liking
+5. Run `npm run build` to build the script
+6. Run `npm run start` to start the built script
 
-## ✨ 核心特性
+## Notes ##
+- If you end the script without closing the browser window first (only with headless as false), you'll be left with hanging chrome instances using resources. Use taskmanager to kill these or use the included `npm run kill-chrome-win` script. (Windows)
+- If you automate this script, set it to run at least 2 times a day to make sure it picked up all tasks, set `"runOnZeroPoints": false` so it doesn't run when no points are found.
 
-本项目已经从一个基础的自动化脚本，进化为一个智能代理，具备以下核心特性：
+## Docker (Experimental) ##
+### **Before Starting**
 
-* **多账户支持**：可同时管理多个微软账户，每个账户可配置独立的代理和User-Agent。
-* **全任务覆盖**：
-    * 每日任务集 (Daily Set)
-    * 更多推广 (More Promotions)
-    * 打卡任务 (Punch Cards)
-    * 桌面端与移动端搜索
-    * 各类问答 (Quiz, This or That, Polls)
-    * 移动端专属任务 (每日签到, 阅读赚积分)
-* **智能化与反检测**：
-    * **AI 动态任务调度**：引入AI指挥官框架，不再遵循固定死板的任务顺序，而是模拟AI动态规划最高效的执行路径，让每次运行的行为都难以预测。
-    * **拟人化交互**：模拟真人的鼠标点击行为（移动、悬停、随机延时、按下、松开），而非瞬时API点击，有效对抗行为检测。
-    * **本地化热搜词**：通过Python脚本定时从**微博、百度、知乎**等国内主流平台抓取最新热搜词，作为搜索任务的关键词，使搜索行为更真实、更“接地气”。
-* **健壮性与稳定性**：
-    * **“断路器”模式**：内置账户状态管理器，当某个账户连续失败（如密码错误、锁定）达到阈值时，会自动“熔断”，在24小时内跳过该账户，之后再自动尝试恢复，避免无效重试和资源浪费。
-    * **持久化登录**：自动保存和加载Session，一次登录后，在有效期内无需重复扫码或验证。
-    * **两步验证 (2FA) 支持**：支持通过推送通知接收并处理无密码登录的验证码。
-* **效率与资源管理**：
-    * **浏览器实例复用**：为每个账户仅启动一个浏览器主进程，在内部通过创建不同的“上下文(Context)”来执行桌面和移动端任务，显著降低了内存占用和运行时间。
-* **完善的生态**：
-    * **Docker 一键部署**：提供完全优化的 `Dockerfile` 和 `compose.yaml`，专为国内网络环境加速，实现一键部署和自动化定时运行。
-    * **内置 Bark 推送**：项目内置了一个基于 **Bark** 的推送服务，会在需要2FA验证或账户被锁定时，自动向您的 Bark App 发送通知，方便您及时处理。
-    * **可配置通知**：同时支持通过 **NTFY** 和 **Webhook** 推送更详细的自定义事件，如每日积分总结、运行日志等。
-    * **每日收益统计**：自动记录每日首次运行的初始积分，并在每次运行结束时计算并报告当日累计总收益。
+- If you had previously built and run the script locally, **remove** the `/node_modules` and `/dist` folders from your `Microsoft-Rewards-Script` directory.
+- If you had used Docker with an older version of the script (e.g., 1.4), **remove** any persistently saved `config.json` and session folders. Old `accounts.json` files can be reused.
 
-## 🚀 部署与使用 (推荐使用 Docker)
+### **Setup the Source Files**
 
-使用 Docker 是最简单、最稳定的运行方式。
+1. **Download the Source Code**
 
-**前提条件**:
-* 已安装 Docker
-* 已安装 Docker Compose
-* 您的手机上已安装并注册好 **Bark App**。
+2. **Update `accounts.json`**
 
-**步骤**:
-1.  **下载或克隆项目代码**。
-2.  **配置账户**:
-    * 将项目根目录下的 `src/accounts.example.json` 文件复制并重命名为 `src/accounts.json`。
-    * 打开 `src/accounts.json`，按照文件内的格式填入您的微软账户、密码、代理（可选）和自定义User-Agent（可选）。
-3.  **自定义运行计划**:
-    * 打开项目根目录下的 `compose.yaml` 文件。
-    * 修改 `TZ` 环境变量为您所在的时区，例如 `Asia/Shanghai`。
-    * 修改 `CRON_SCHEDULE` 来定义您希望脚本自动运行的时间。您可以使用 [crontab.guru](https://crontab.guru) 来生成表达式。默认是每天的8点、13点和20点运行。
-4.  **配置 Bark 推送**:
-    * 打开 `src/util/Push.ts` 文件。
-    * 将文件中的示例URL替换成**您自己 Bark App 提供的推送URL**。
-5.  **构建并启动**:
-    * 在项目根目录下，执行命令：
-        ```bash
-        docker-compose up -d --build
-        ```
-6.  **查看日志**:
-    * 使用以下命令来监控脚本的实时运行日志：
-        ```bash
-        docker-compose logs -f
-        ```
+3. **Edit `config.json`,** ensuring `"headless": true,` other settings are up to your preference
 
-## ⚙️ 本地开发 (不推荐用于日常运行)
+### **Customize the `compose.yaml` File**
 
-1.  安装 Node.js (v18+)。
-2.  在项目根目录下，运行 `npm install` 安装依赖。
-3.  配置 `src/accounts.json` 和 `src/config.json`。
-4.  编译 TypeScript: `npm run build`。
-5.  启动脚本: `npm run start`。
+A basic docker `compose.yaml` is provided. Follow these steps to configure and run the container:
 
-## ⚠️ 重要声明
+1. **Set Your Timezone:** Adjust the `TZ` variable to ensure correct scheduling.
+2. **Configure Persistent Storage:**
+   - Map `config.json` and `accounts.json` to retain settings and accounts.
+   - (Optional) Use a persistent `sessions` folder to save login sessions.
+3. **Customize the Schedule:**
+   - Modify `CRON_SCHEDULE` to set run times. Use [crontab.guru](https://crontab.guru) for help.
+   - **Note:** The container adds 5–50 minutes of random variability to each scheduled start time.
+4. **(Optional) Run on Startup:**
+   - Set `RUN_ON_START=true` to execute the script immediately when the container starts.
+5. **Start the Container:** Run `docker compose up -d` to build and launch.
+6. **Monitor Logs:** Use `docker logs microsoft-rewards-script` to view script execution and to retrieve 'passwordless' login codes.
 
-* **使用此脚本可能违反 Microsoft Rewards 的服务条款，您的账户存在被暂停或封禁的风险。请您自行承担风险。**
-* 本项目仅供学习和技术研究使用，作者不对任何因使用此脚本导致的后果负责。
+## NTFY push notifications (experimental) ##
+Push notifications can be optionally enabled using [NTFY](https://ntfy.sh/).
+
+1. Open your `config.json` file and locate the `ntfy` section.
+2. Set `"enabled"` to `true`.
+3. Add your NTFY server URL in the `"url"` field.
+4. Enter the topic for notifications in the `"topic"` field.
+5. Optionally, add your NTFY authentication token in the `"authToken"` field (if required).
+6. Save the file.
+7. Rebuild the script, or recreate the Docker container if it's already running to apply the changes.
+
+### Notification customizations ###
+- To change the emojis used in the notifications, edit the tags in `Ntfy.sh`. Visit NTFY's emoji customization [guide](https://docs.ntfy.sh/emojis) for available options.
+- To customize which keywords trigger notifications, add or customize the keywords in `Logger.ts`.
+- By default, notifications will be sent for the following events, per account:
+  - Script start
+  - 2FA/passwordless codes
+  - Script completion
+  - Points earned
+  - Critical warnings
+
+## Config ## 
+| Setting        | Description           | Default  |
+| :------------- |:-------------| :-----|
+|  baseURL    | MS Rewards page | `https://rewards.bing.com` |
+|  sessionPath    | Path to where you want sessions/fingerprints to be stored | `sessions` (In ./browser/sessions) |
+|  headless    | If the browser window should be visible be ran in the background | `false` (Browser is visible) |
+|  parallel    | If you want mobile and desktop tasks to run parallel or sequential| `true` |
+|  runOnZeroPoints    | Run the rest of the script if 0 points can be earned | `false` (Will not run on 0 points) |
+|  clusters    | Amount of instances ran on launch, 1 per account | `1` (Will run 1 account at the time) |
+|  saveFingerprint.mobile    | Re-use the same fingerprint each time | `false` (Will generate a new fingerprint each time) |
+|  saveFingerprint.desktop    | Re-use the same fingerprint each time | `false` (Will generate a new fingerprint each time) |
+|  workers.doDailySet    | Complete daily set items | `true`  |
+|  workers.doMorePromotions    | Complete promotional items | `true`  |
+|  workers.doPunchCards    | Complete punchcards | `true`  |
+|  workers.doDesktopSearch    | Complete daily desktop searches | `true`  |
+|  workers.doMobileSearch    | Complete daily mobile searches | `true`  |
+|  workers.doDailyCheckIn    | Complete daily check-in activity | `true`  |
+|  workers.doReadToEarn    | Complete read to earn activity | `true`  |
+|  searchOnBingLocalQueries    | Complete the activity "search on Bing" using the `queries.json` or fetched from this repo | `false` (Will fetch from this repo)   |
+|  globalTimeout    | The length before the action gets timeout | `30s`   |
+|  searchSettings.useGeoLocaleQueries    | Generate search queries based on your geo-location | `false` (Uses EN-US generated queries)  |
+|  searchSettings.scrollRandomResults    | Scroll randomly in search results | `true`   |
+|  searchSettings.clickRandomResults    | Visit random website from search result| `true`   |
+|  searchSettings.searchDelay    | Minimum and maximum time in milliseconds between search queries | `min: 3min`    `max: 5min` |
+|  searchSettings.retryMobileSearchAmount     | Keep retrying mobile searches for specified amount | `2` |
+|  logExcludeFunc | Functions to exclude out of the logs and webhooks | `SEARCH-CLOSE-TABS` |
+|  webhookLogExcludeFunc | Functions to exclude out of the webhooks log | `SEARCH-CLOSE-TABS` |
+|  proxy.proxyGoogleTrends     | Enable or disable proxying the request via set proxy | `true` (will be proxied) |
+|  proxy.proxyBingTerms     | Enable or disable proxying the request via set proxy | `true` (will be proxied) |
+|  webhook.enabled     | Enable or disable your set webhook | `false` |
+|  webhook.url     | Your Discord webhook URL | `null` |
+|  ntfy.enabled   | Enable or disable NTFY notification | `false` |
+|  ntfy.url     | Your NTFY URL | `null` |
+|  ntfy.topic    | Your NTFY topic | `null` |
+|  ntfy.authToken   | Your NTFY authentication token, if applicable | `null` |
+
+## Features ##
+- [x] Multi-Account Support
+- [x] Session Storing
+- [x] 2FA Support
+- [x] Passwordless Support
+- [x] Headless Support
+- [x] Discord Webhook Support
+- [x] Desktop Searches
+- [x] Configurable Tasks
+- [x] Microsoft Edge Searches
+- [x] Mobile Searches
+- [x] Emulated Scrolling Support
+- [x] Emulated Link Clicking Support
+- [x] Geo Locale Search Queries
+- [x] Completing Daily Set
+- [x] Completing More Promotions
+- [x] Solving Quiz (10 point variant)
+- [x] Solving Quiz (30-40 point variant)
+- [x] Completing Click Rewards
+- [x] Completing Polls
+- [x] Completing Punchcards
+- [x] Solving This Or That Quiz (Random)
+- [x] Solving ABC Quiz
+- [x] Completing Daily Check In
+- [x] Completing Read To Earn
+- [x] Clustering Support
+- [x] Proxy Support
+- [x] Docker Support (experimental)
+- [x] Automatic scheduling (via Docker)
+- [x] Push notifications (via NTFY; experimental)
+
+## Disclaimer ##
+Your account may be at risk of getting banned or suspended using this script, you've been warned!
+<br /> 
+Use this script at your own risk!

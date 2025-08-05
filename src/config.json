@@ -55,8 +55,8 @@
         "apiServer": {
         "enabled": true,
         "url": "https://mic.237890.xyz/api/update_points",
-        "token": "key",
-	 "nodeName": "nodename"
+        "token": "google",
+	 "nodeName": "ITX"
     },
         "hotSearchApi": {
         "enabled": true,
