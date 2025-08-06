@@ -15,31 +15,32 @@ import Activities from './functions/Activities'
 import { Account } from './interface/Account'
 import Axios from './util/Axios'
 
-async function sendPointsUpdate(bot: MicrosoftRewardsBot, data: { email: string, total_points: number, daily_gain: number }) {
+async function sendFinalUpdate(bot: MicrosoftRewardsBot, data: { email: string, total_points: number, daily_gain: number }) {
     const apiConfig = bot.config.apiServer;
-    if (!apiConfig || !apiConfig.enabled || !apiConfig.url || !apiConfig.token) {
-        return; 
+    if (!apiConfig || !apiConfig.enabled || !apiConfig.updateUrl || !apiConfig.token) {
+        return;
     }
     
     const payload = {
         ...data,
+        status: bot.accountStatus,
         node_name: apiConfig.nodeName || '默认节点'
     };
 
     try {
-        log('main', '数据上报', `正在向中心API上报账户 ${data.email} (节点: ${payload.node_name}) 的积分数据...`);
+        log('main', '最终上报', `正在向中心API上报账户 ${data.email} 的最终数据 (状态: ${payload.status}, 节点: ${payload.node_name})...`);
         await bot.axios.request({
-            url: apiConfig.url,
+            url: apiConfig.updateUrl,
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${apiConfig.token}`
             },
             data: payload
         }, true);
-        log('main', '数据上报', `账户 ${data.email} 的数据上报成功！`);
+        log('main', '最终上报', `账户 ${data.email} 的最终数据上报成功！`);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        log('main', '数据上报', `向中心API上报数据失败: ${errorMessage}`, 'error');
+        log('main', '最终上报', `向中心API上报最终数据失败: ${errorMessage}`, 'error');
     }
 }
 
@@ -56,9 +57,10 @@ export class MicrosoftRewardsBot {
     public homePage!: Page
     private browserFactory: Browser = new Browser(this)
     private workers: Workers
-    private login = new Login(this)
+    private login: Login
     private accessToken: string = ''
     public axios!: Axios
+    public accountStatus: string = '未知';
 
     constructor() {
         this.log = log
@@ -69,6 +71,7 @@ export class MicrosoftRewardsBot {
             utils: new BrowserUtil(this)
         }
         this.config = loadConfig()
+        this.login = new Login(this)
     }
     
     private async Desktop(browser: PlaywrightBrowser, account: Account): Promise<number> {
@@ -82,7 +85,8 @@ export class MicrosoftRewardsBot {
             
             const data = await this.browser.func.getDashboardData(page);
             
-            const todayStr = new Date().toISOString().slice(0, 10);
+            // [核心修正] 使用新的、基于本地时区的日期函数
+            const todayStr = this.utils.getYYYYMMDD();
             const dailyPointsData = await loadDailyPoints(this.config.sessionPath, account.email);
             let initialPointsToday: number;
 
@@ -111,7 +115,6 @@ export class MicrosoftRewardsBot {
             if (this.config.workers.doPunchCards) await this.workers.doPunchCard(page, data);
             
             const freshData = await this.browser.func.getDashboardData(page);
-            // [修改] 调用搜索时，传入 account.email
             if (this.config.workers.doDesktopSearch) await this.activities.doSearch(page, freshData, account.email);
             
             return initialPointsToday;
@@ -155,7 +158,6 @@ export class MicrosoftRewardsBot {
                     if (data.userStatus.counters.mobileSearch) {
                         const workerPage = await context.newPage();
                         await this.browser.func.goHome(workerPage);
-                        // [修改] 调用搜索时，传入 account.email
                         await this.activities.doSearch(workerPage, data, account.email);
                     } else {
                         log(this.isMobile, '主流程', `[${account.email}] 无法获取移动端搜索积分，您的账户可能太“新”了！`, 'warn');
@@ -171,7 +173,7 @@ export class MicrosoftRewardsBot {
             log(this.isMobile, '积分统计', summaryMessage, 'log', 'green');
             await sendPush('每日积分统计', summaryMessage);
 
-            await sendPointsUpdate(this, {
+            await sendFinalUpdate(this, {
                 email: account.email,
                 total_points: finalPoints,
                 daily_gain: totalPointsCollected
@@ -201,7 +203,8 @@ export class MicrosoftRewardsBot {
                 try {
                     await this.login.login(recoveryPage, account.email, account.password);
                     
-                    const todayStr = new Date().toISOString().slice(0, 10);
+                    // [核心修正] 在错误恢复流程中也使用新的日期函数
+                    const todayStr = this.utils.getYYYYMMDD();
                     const dailyPointsData = await loadDailyPoints(this.config.sessionPath, account.email);
                     if (dailyPointsData && dailyPointsData.date === todayStr) {
                         initialPointsToday = dailyPointsData.initialPoints;
@@ -235,14 +238,15 @@ async function runTasksForAccounts(accounts: Account[]) {
         }
 
         log('main', '主进程-WORKER', `开始为账户 ${account.email} 执行任务`);
+        const bot = new MicrosoftRewardsBot();
         try {
-            const bot = new MicrosoftRewardsBot();
             await bot.runFor(account);
             accountStatusManager.recordSuccess(account.email);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             log('main', '主进程-WORKER', `账户 ${account.email} 的任务执行失败: ${errorMessage}`, 'error');
             accountStatusManager.recordFailure(account.email);
+            await sendFinalUpdate(bot, {email: account.email, total_points: -1, daily_gain: -1});
         }
         log('main', '主进程-WORKER', `完成账户 ${account.email} 的所有任务流程。`, 'log', 'green');
     }

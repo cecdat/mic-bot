@@ -9,30 +9,31 @@ export default class Util {
         })
     }
 
-    // [新增] 模拟真人点击的函数
     async humanClick(locator: Locator): Promise<void> {
-        // 模拟鼠标移动到元素上
         await locator.hover({ timeout: 10000 });
-        // 模拟点击前的短暂思考
         await this.wait(this.randomNumber(50, 200));
-        // 模拟鼠标按下
         await locator.dispatchEvent('mousedown');
-        // 模拟按下的持续时间
         await this.wait(this.randomNumber(30, 100));
-        // 模拟鼠标松开，完成点击
         await locator.dispatchEvent('mouseup');
-        // 触发click事件确保兼容性
         await locator.click({ force: true, timeout: 5000 });
     }
 
     getFormattedDate(ms = Date.now()): string {
         const today = new Date(ms)
-        const month = String(today.getMonth() + 1).padStart(2, '0')  // January is 0
+        const month = String(today.getMonth() + 1).padStart(2, '0')
         const day = String(today.getDate()).padStart(2, '0')
         const year = today.getFullYear()
 
         return `${month}/${day}/${year}`
     }
+    
+    getYYYYMMDD(date = new Date()): string {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
 
     shuffleArray<T>(array: T[]): T[] {
         return array.map(value => ({ value, sort: Math.random() }))
@@ -59,7 +60,8 @@ export default class Util {
     stringToMs(input: string | number): number {
         const milisec = ms(input.toString())
         if (!milisec) {
-            throw new Error('The string provided cannot be parsed to a valid time! Use a format like "1 min", "1m" or "1 minutes"')
+            // [核心修改] 将错误信息中文化
+            throw new Error('提供的时间字符串无法被正确解析！请使用类似 "1 min", "1m" 或 "1 minutes" 的格式。')
         }
         return milisec
     }
