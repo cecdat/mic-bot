@@ -3,19 +3,21 @@ import * as crypto from 'crypto'
 import { AxiosRequestConfig } from 'axios'
 import fs from 'fs'
 import path from 'path'
-
 import { MicrosoftRewardsBot } from '../index'
 import { saveSessionData } from '../util/Load'
-import { sendPush } from '../util/Push'
 import { OAuth } from '../interface/OAuth'
+
+export const LoginStatusCode = {
+    Success: 0,
+    PasswordError: 1,
+    Locked: 2,
+    VerificationRequired: 3,
+    AuthorizationRequired: 4, // 2FA
+    GenericFailure: 99
+};
 
 export class Login {
     private bot: MicrosoftRewardsBot
-    private clientId: string = '0000000040170455'
-    private authBaseUrl: string = 'https://login.live.com/oauth20_authorize.srf'
-    private redirectUrl: string = 'https://login.live.com/oauth20_desktop.srf'
-    private tokenUrl: string = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token'
-    private scope: string = 'service::prod.rewardsplatform.microsoft.com::MBI_SSL'
 
     constructor(bot: MicrosoftRewardsBot) {
         this.bot = bot
@@ -37,29 +39,39 @@ export class Login {
     }
 
     async login(page: Page, email: string, password: string) {
+        const platformType = this.bot.isMobile ? 'mobile' : 'pc';
         try {
             this.bot.log(this.bot.isMobile, '登录', `[${email}] 开始登录流程！`);
             await this.gotoWithRetry(page, 'https://rewards.bing.com/signin');
             await page.waitForLoadState('domcontentloaded').catch(() => { });
             await this.bot.browser.utils.reloadBadPage(page);
-            await this.checkAccountLocked(page);
+            await this.checkAccountLocked(page, email);
             const isLoggedIn = await page.waitForSelector('html[data-role-name="RewardsPortal"]', { timeout: 10000 }).then(() => true).catch(() => false);
-            if (!isLoggedIn) {
-                await this.execLogin(page, email, password);
+
+            if (isLoggedIn) {
+                this.bot.log(this.bot.isMobile, '登录', `[${email}] 会话有效，已经处于登录状态`);
+                await this.bot.sendStatusUpdate(platformType, true, LoginStatusCode.Success, '会话有效');
+                await this.checkAccountLocked(page, email);
             } else {
-                this.bot.log(this.bot.isMobile, '登录', `[${email}] 已经处于登录状态`);
-                await this.checkAccountLocked(page);
+                await this.execLogin(page, email, password);
             }
             await saveSessionData(this.bot.config.sessionPath, page.context(), email, this.bot.isMobile);
-            this.bot.log(this.bot.isMobile, '登录', `[${email}] 登录成功，并已保存登录会话！`);
+            this.bot.log(this.bot.isMobile, '登录', `[${email}] 登录流程成功，并已保存登录会话！`);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            this.bot.log(this.bot.isMobile, '登录', `[${email}] 发生错误: ${errorMessage}`, 'error');
+            this.bot.log(this.bot.isMobile, '登录', `[${email}] 登录流程发生错误: ${errorMessage}`, 'error');
+            
+            let code = LoginStatusCode.GenericFailure;
+            if (errorMessage.includes('密码不正确')) code = LoginStatusCode.PasswordError;
+            if (errorMessage.includes('此账户已被锁定')) code = LoginStatusCode.Locked;
+            
+            await this.bot.sendStatusUpdate(platformType, false, code, errorMessage);
             throw new Error(errorMessage);
         }
     }
 
     private async execLogin(page: Page, email: string, password: string) {
+        const platformType = this.bot.isMobile ? 'mobile' : 'pc';
         try {
             await this.enterEmail(page, email);
             await this.bot.utils.wait(2000);
@@ -67,10 +79,9 @@ export class Login {
             await this.bot.utils.wait(2000);
             await this.enterPassword(page, password);
             await this.checkLoggedIn(page, email);
+            await this.bot.sendStatusUpdate(platformType, true, LoginStatusCode.Success, '登录成功');
             this.bot.log(this.bot.isMobile, '登录', `[${email}] 成功登录到微软账户`);
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            this.bot.log(this.bot.isMobile, '登录', `[${email}] 发生错误: ${errorMessage}`, 'error');
             throw error;
         }
     }
@@ -97,9 +108,7 @@ export class Login {
             if (nextButton) {
                 await nextButton.click();
                 await this.bot.utils.wait(3000);
-
                 await this.handleVerifyEmailPage(page, email);
-
                 this.bot.log(this.bot.isMobile, '登录', `[${email}] 邮箱输入成功`);
             } else {
                 this.bot.log(this.bot.isMobile, '登录', `[${email}] 输入邮箱后未找到“下一步”按钮`, 'warn');
@@ -140,7 +149,9 @@ export class Login {
     }
 
     private async handle2FA(page: Page) {
+        const platformType = this.bot.isMobile ? 'mobile' : 'pc';
         try {
+            await this.bot.sendStatusUpdate(platformType, false, LoginStatusCode.AuthorizationRequired, '需要2FA/授权');
             const numberToPress = await this.get2FACode(page);
             await this.authAppVerification(page, numberToPress);
         } catch (error) {
@@ -170,14 +181,10 @@ export class Login {
     
     private async authAppVerification(page: Page, numberToPress: string | null) {
         if (!numberToPress) {
-            this.bot.log(this.bot.isMobile, '登录', '无法自动读取验证码，等待用户手动批准...', 'warn');
-            await sendPush('微软账户验证', '脚本正在等待您手动批准登录。');
+            this.bot.log(this.bot.isMobile, '登录', '无法自动读取验证码，等待用户手动批准...');
         } else {
             const accountEmail = await page.evaluate(() => (document.querySelector('#bannerText') as HTMLElement | null)?.innerText || '未知账号');
-            const pushTitle = `微软账户授权码`;
-            const pushContent = `账号: ${accountEmail}，授权码: ${numberToPress}`;
-            this.bot.log(this.bot.isMobile, '登录', `请在您的 Authenticator 应用中按下数字 ${numberToPress} 以批准登录`);
-            await sendPush(pushTitle, pushContent);
+            this.bot.log(this.bot.isMobile, '登录', `账号: ${accountEmail}，请在您的 Authenticator 应用中按下数字 ${numberToPress} 以批准登录`);
         }
 
         while (true) {
@@ -206,10 +213,7 @@ export class Login {
             if(newNumber) {
                 numberToPress = newNumber;
                 const accountEmail = await page.evaluate(() => (document.querySelector('#bannerText') as HTMLElement | null)?.innerText || '未知账号');
-                const pushTitle = `微软账户新授权码`;
-                const pushContent = `账号: ${accountEmail}，新授权码: ${newNumber}`;
-                this.bot.log(this.bot.isMobile, '登录', `新的验证码: ${newNumber}。请在应用中输入。`);
-                await sendPush(pushTitle, pushContent);
+                this.bot.log(this.bot.isMobile, '登录', `账号: ${accountEmail}，新的验证码: ${newNumber}。请在应用中输入。`);
             } else {
                  this.bot.log(this.bot.isMobile, '登录', '无法获取新的验证码，请检查手机或手动操作。', 'error');
                  break; 
@@ -217,12 +221,12 @@ export class Login {
         }
     }
 
-    async getMobileAccessToken(page: Page, email: string) {
-        const authorizeUrl = new URL(this.authBaseUrl);
+    async getMobileAccessToken(page: Page, email: string): Promise<string> {
+        const authorizeUrl = new URL('https://login.live.com/oauth20_authorize.srf');
         authorizeUrl.searchParams.append('response_type', 'code');
-        authorizeUrl.searchParams.append('client_id', this.clientId);
-        authorizeUrl.searchParams.append('redirect_uri', this.redirectUrl);
-        authorizeUrl.searchParams.append('scope', this.scope);
+        authorizeUrl.searchParams.append('client_id', '0000000040170455');
+        authorizeUrl.searchParams.append('redirect_uri', 'https://login.live.com/oauth20_desktop.srf');
+        authorizeUrl.searchParams.append('scope', 'service::prod.rewardsplatform.microsoft.com::MBI_SSL');
         authorizeUrl.searchParams.append('state', crypto.randomBytes(16).toString('hex'));
         authorizeUrl.searchParams.append('access_type', 'offline_access');
         authorizeUrl.searchParams.append('login_hint', email);
@@ -237,16 +241,16 @@ export class Login {
                 code = currentUrl.searchParams.get('code')!;
                 break;
             }
-            currentUrl = new URL(page.url());
             await this.bot.utils.wait(5000);
+            currentUrl = new URL(page.url());
         }
         const body = new URLSearchParams();
         body.append('grant_type', 'authorization_code');
-        body.append('client_id', this.clientId);
+        body.append('client_id', '0000000040170455');
         body.append('code', code);
-        body.append('redirect_uri', this.redirectUrl);
+        body.append('redirect_uri', 'https://login.live.com/oauth20_desktop.srf');
         const tokenRequest: AxiosRequestConfig = {
-            url: this.tokenUrl,
+            url: 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token',
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             data: body.toString()
@@ -278,7 +282,10 @@ export class Login {
             if (this.bot.config.debug) {
                 await this.saveSnapshot(page, email, 'post_login_snapshot.html');
             }
-
+            const invalidPassword = await page.locator(':text("That password isn\'t correct"), :text("密码不正确")').isVisible({ timeout: 1000 });
+            if (invalidPassword) {
+                 throw new Error(`[${email}] 密码不正确`);
+            }
             await page.waitForSelector('html[data-role-name="RewardsPortal"]', { timeout: 10000 });
             this.bot.log(this.bot.isMobile, '登录', `[${email}] 成功登录到奖励门户`);
         } catch (error) {
@@ -287,7 +294,7 @@ export class Login {
             if (this.bot.config.debug) {
                 await this.saveSnapshot(page, email, 'login_failure_snapshot.html');
             }
-            throw new Error(`[${email}] 验证登录状态失败`);
+            throw new Error(`[${email}] 验证登录状态失败: ${errorMessage}`);
         }
     }
 
@@ -307,16 +314,15 @@ export class Login {
     }
     
     private async handleVerifyEmailPage(page: Page, email: string) {
+        const platformType = this.bot.isMobile ? 'mobile' : 'pc';
         const verifyEmailTitle = page.locator('h1:has-text("验证你的电子邮件"), h1:has-text("Verify your email")');
-        const usePasswordLink = page.getByRole('button', { name: /Use your password/i });
-
         if (await verifyEmailTitle.isVisible({ timeout: 2000 })) {
-            this.bot.log(this.bot.isMobile, '登录', `[${email}] 检测到“验证电子邮件”页面，将选择“使用密码”登录...`);
+            this.bot.log(this.bot.isMobile, '登录', `[${email}] 检测到“验证电子邮件”页面`);
+            await this.bot.sendStatusUpdate(platformType, false, LoginStatusCode.VerificationRequired, '需要邮件验证');
+            const usePasswordLink = page.getByRole('button', { name: /Use your password/i });
             if (await usePasswordLink.isVisible()) {
                 await usePasswordLink.click();
                 await this.bot.utils.wait(2000);
-            } else {
-                this.bot.log(this.bot.isMobile, '登录', `[${email}] 未找到“使用密码”链接`, 'error');
             }
         }
     }
@@ -339,13 +345,11 @@ export class Login {
         }
     }
 
-    private async checkAccountLocked(page: Page) {
+    private async checkAccountLocked(page: Page, email: string) {
         await this.bot.utils.wait(2000);
         const isLocked = await page.waitForSelector('#serviceAbuseLandingTitle', { state: 'visible', timeout: 1000 }).then(() => true).catch(() => false);
         if (isLocked) {
-            const email = await page.evaluate(() => (document.querySelector('#i0116') as HTMLInputElement | null)?.value || '未知邮箱');
-            await sendPush('微软账户异常', `账户 ${email} 已被锁定！`);
-            const errorMsg = '此账户已被锁定！请从 "accounts.json" 中移除该账户并重启！';
+            const errorMsg = `[${email}] 此账户已被锁定！`;
             this.bot.log(this.bot.isMobile, '检查锁定', errorMsg, 'error');
             throw new Error(errorMsg);
         }

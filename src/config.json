@@ -4,7 +4,6 @@
     "headless": true,
     "parallel": false,
     "runOnZeroPoints": false,
-    "clusters": 1,
     "debug": false,
     "saveFingerprint": {
         "mobile": false,
@@ -22,43 +21,15 @@
     "searchOnBingLocalQueries": true,
     "globalTimeout": "30s",
     "navigationTimeout": "120s",
-    "searchSettings": {
-        "useGeoLocaleQueries": true,
-        "scrollRandomResults": true,
-        "clickRandomResults": true,
-        "searchDelay": {
-            "min": "30s",
-            "max": "2min"
-        },
-        "retryMobileSearchAmount": 2
-    },
-    "logExcludeFunc": [
-        "SEARCH-CLOSE-TABS"
-    ],
-    "webhookLogExcludeFunc": [
-        "SEARCH-CLOSE-TABS"
-    ],
-    "proxy": {
-        "proxyGoogleTrends": true,
-        "proxyBingTerms": true
-    },
-    "webhook": {
-        "enabled": false,
-        "url": ""
-    },
-    "ntfy": {
-        "enabled": false,
-        "url": "",  
-        "topic": "", 
-        "authToken": "" 
-    },
-        "apiServer": {
+    "apiServer": {
         "enabled": true,
-        "url": "https://mic.237890.xyz/api/update_points",
-        "token": "google",
-	 "nodeName": "ITX"
+        "updateUrl": "points_api-servie",
+        "token": "points_api-key",
+        "nodeName": "Nodename",
+        "heartbeatInterval": "5m",
+        "heartbeatTimeout": "10m"
     },
-        "hotSearchApi": {
+    "hotSearchApi": {
         "enabled": true,
         "baseUrl": "https://hots.237890.xyz"
     }
