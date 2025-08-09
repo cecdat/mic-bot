@@ -1,8 +1,10 @@
 export interface ConfigApiServer {
     enabled: boolean;
-    url: string;
+    updateUrl: string;
     token: string;
-    nodeName?: string;
+    nodeName: string;
+    heartbeatInterval?: string | number;
+    heartbeatTimeout?: string | number;
 }
 
 export interface ConfigHotSearchApi {
@@ -10,32 +12,9 @@ export interface ConfigHotSearchApi {
     baseUrl: string;
 }
 
-export interface Config {
-    baseURL: string;
-    sessionPath: string;
-    headless: boolean;
-    parallel: boolean;
-    runOnZeroPoints: boolean;
-    clusters: number;
-    debug: boolean;
-    saveFingerprint: ConfigSaveFingerprint;
-    workers: ConfigWorkers;
-    searchOnBingLocalQueries: boolean;
-    globalTimeout: number | string;
-    navigationTimeout: number | string;
-    searchSettings: ConfigSearchSettings;
-    logExcludeFunc: string[];
-    webhookLogExcludeFunc: string[];
-    proxy: ConfigProxy;
-    webhook: ConfigWebhook;
-    ntfy: ConfigNtfy;
-    apiServer: ConfigApiServer;
-    hotSearchApi: ConfigHotSearchApi;
-}
-
-export interface ConfigSaveFingerprint {
-    mobile: boolean;
-    desktop: boolean;
+export interface ConfigSearchDelay {
+    min: number | string;
+    max: number | string;
 }
 
 export interface ConfigSearchSettings {
@@ -44,11 +23,6 @@ export interface ConfigSearchSettings {
     clickRandomResults: boolean;
     searchDelay: ConfigSearchDelay;
     retryMobileSearchAmount: number;
-}
-
-export interface ConfigSearchDelay {
-    min: number | string;
-    max: number | string;
 }
 
 export interface ConfigWebhook {
@@ -76,4 +50,31 @@ export interface ConfigWorkers {
     doMobileSearch: boolean;
     doDailyCheckIn: boolean;
     doReadToEarn: boolean;
+}
+
+export interface ConfigSaveFingerprint {
+    mobile: boolean;
+    desktop: boolean;
+}
+
+export interface Config {
+    baseURL: string;
+    sessionPath: string;
+    headless: boolean;
+    parallel: boolean;
+    runOnZeroPoints: boolean;
+    debug: boolean;
+    saveFingerprint: ConfigSaveFingerprint;
+    workers: ConfigWorkers;
+    searchOnBingLocalQueries: boolean;
+    globalTimeout: number | string;
+    navigationTimeout: number | string;
+    searchSettings: ConfigSearchSettings;
+    logExcludeFunc: string[];
+    webhookLogExcludeFunc: string[];
+    proxy: ConfigProxy;
+    webhook: ConfigWebhook;
+    ntfy: ConfigNtfy;
+    apiServer: ConfigApiServer;
+    hotSearchApi: ConfigHotSearchApi;
 }

@@ -1,4 +1,0 @@
-# 每6小时的第0分钟执行一次Python脚本
-0 */3 * * * root /usr/bin/python3 /usr/src/microsoft-rewards-script/get_all_hots.py >> /var/log/cron.log 2>&1
-# Run automation according to CRON_SCHEDULE; redirect both stdout & stderr to Docker logs
-${CRON_SCHEDULE} TZ=${TZ} /bin/bash /usr/src/microsoft-rewards-script/src/run_daily.sh >> /proc/1/fd/1 2>&1

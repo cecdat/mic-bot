@@ -1,33 +1,30 @@
-import { loadConfig } from './Load'
-import axios from 'axios'
+import { loadConfig } from './Load';
+import axios from 'axios';
 
 const NOTIFICATION_TYPES = {
-    error: { priority: 'max', tags: 'rotating_light' }, // Customize the ERROR icon here, see: https://docs.ntfy.sh/emojis/
-    warn: { priority: 'high', tags: 'warning' }, // Customize the WARN icon here, see: https://docs.ntfy.sh/emojis/
-    log: { priority: 'default', tags: 'medal_sports' } // Customize the LOG icon here, see: https://docs.ntfy.sh/emojis/
-}
+    error: { priority: 'max', tags: 'rotating_light' },
+    warn: { priority: 'high', tags: 'warning' },
+    log: { priority: 'default', tags: 'medal_sports' }
+};
 
 export async function Ntfy(message: string, type: keyof typeof NOTIFICATION_TYPES = 'log'): Promise<void> {
-    const config = loadConfig().ntfy
-    if (!config?.enabled || !config.url || !config.topic) return
+    const config = loadConfig().ntfy; // Safely access the ntfy property
+    if (!config || !config.enabled || !config.url || !config.topic) return;
 
     try {
-        const { priority, tags } = NOTIFICATION_TYPES[type]
-        const headers = {
+        const { priority, tags } = NOTIFICATION_TYPES[type];
+        const headers: Record<string, string> = {
             Title: 'Microsoft Rewards Script',
             Priority: priority,
             Tags: tags,
-            ...(config.authToken && { Authorization: `Bearer ${config.authToken}` })
+        };
+        if (config.authToken) {
+            headers['Authorization'] = `Bearer ${config.authToken}`;
         }
 
-        const response = await axios.post(`${config.url}/${config.topic}`, message, { headers })
-        
-        if (response.status === 200) {
-            console.log('NTFY notification successfully sent.')
-        } else {
-            console.error(`NTFY notification failed with status ${response.status}`)
-        }
+        await axios.post(`${config.url}/${config.topic}`, message, { headers });
     } catch (error) {
-        console.error('Failed to send NTFY notification:', error)
+        // Silent fail to prevent crashing the main app
+        console.error('Failed to send NTFY notification:', error);
     }
 }
